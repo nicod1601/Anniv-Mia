@@ -76,7 +76,22 @@
   button:focus-visible { outline: 1px dotted #000; outline-offset: -5px; }
   .shake { animation: shake .35s; }
   @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
-  @media (prefers-reduced-motion: reduce) { .shake, #bios .cursor { animation: none; } }
+  /* ---------- Vidéo d'intro ---------- */
+  #intro {
+    position: fixed; inset: 0; z-index: 1000; background: #000; display: none;
+    align-items: center; justify-content: center; opacity: 0; transition: opacity .6s;
+  }
+  #intro.show { opacity: 1; }
+  #intro video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #skip, #playbtn {
+    position: absolute; font: inherit; font-size: 13px; color: #fff; cursor: pointer;
+    background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.4); border-radius: 4px; padding: 7px 14px;
+  }
+  #skip { right: 16px; bottom: 16px; opacity: .75; min-width: 0; }
+  #skip:hover { opacity: 1; background: rgba(0,0,0,.8); }
+  #playbtn { display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 16px; padding: 12px 24px; }
+  #skip:focus-visible, #playbtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .shake, #bios .cursor { animation: none; } #intro { transition: none; } }
 </style>
 </head>
 <body>
@@ -107,6 +122,15 @@
     </div>
   </section>
 </main>
+
+<div id="intro" aria-label="Vidéo d'introduction">
+  <video id="introVideo" playsinline preload="auto">
+    <source src="video/intro.mp4" type="video/mp4">
+    <source src="video/intro.webm" type="video/webm">
+  </video>
+  <button id="playbtn" type="button">▶ Lancer la vidéo</button>
+  <button id="skip" type="button">Passer ›</button>
+</div>
 
 <script>
 (() => {
@@ -169,6 +193,33 @@
     await wait(600);
   }
 
+  /* ---------- 4. Vidéo d'intro puis bureau ---------- */
+  let termine = false;
+  function versBureau() {
+    if (termine) return; termine = true;
+    $('#intro').classList.remove('show');
+    setTimeout(() => { location.href = 'bureau.html'; }, 600);
+  }
+  function lancerIntro() {
+    const box = $('#intro'), vid = $('#introVideo');
+    box.style.display = 'flex';
+    requestAnimationFrame(() => box.classList.add('show'));
+    vid.addEventListener('ended', versBureau);
+    $('#skip').onclick = versBureau;
+    // si la vidéo est introuvable, on passe directement au bureau
+    const sources = [...vid.querySelectorAll('source')];
+    sources.forEach(src => src.addEventListener('error', () => {
+      src.dataset.ko = '1';
+      if (sources.every(x => x.dataset.ko)) versBureau();
+    }));
+    vid.addEventListener('error', versBureau);
+    const lire = vid.play();
+    if (lire && lire.catch) lire.catch(() => {            // lecture auto bloquée : bouton manuel
+      const b = $('#playbtn'); b.style.display = 'block'; b.focus();
+      b.onclick = () => { b.style.display = 'none'; vid.play().catch(versBureau); };
+    });
+  }
+
   /* ---------- 3. Mot de passe ---------- */
   function askPassword() {
     $('#loading').style.display = 'none';
@@ -180,7 +231,8 @@
       if (v === PASSWORD) {
         $('#msg').style.color = '#006000';
         $('#msg').textContent = 'Connexion en cours…';
-        setTimeout(() => { location.href = 'bureau.html'; }, 500);
+        $('#pw').disabled = true; $('#form button').disabled = true;
+        setTimeout(lancerIntro, 500);
       } else {
         $('#msg').style.color = '#a00000';
         $('#msg').textContent = 'Mot de passe incorrect. Réessaie.';
