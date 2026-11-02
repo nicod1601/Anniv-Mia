@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mon bureau</title>
+<link rel="stylesheet" href="jeux/jeux.css">
 <style>
   :root {
     --wall-a: #14343f;
@@ -117,6 +118,9 @@
   .player audio { width: 100%; max-width: 420px; }
   .ico { position: relative; width: 52px; height: 52px; flex: none; }
   .icon .ico > svg { width: 52px; height: 52px; }
+  .icon .ico > img { width: 52px; height: 52px; border-radius: 13px; object-fit: cover; display: block; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .icon .ico .check { position: absolute; right: -6px; bottom: -4px; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .icon:not(.done) .check { display: none; }
   .icon .ico .badge { position: absolute; right: -6px; bottom: -4px; width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
   .icon:not(.locked) .badge { display: none; }
   .icon.locked .ico > svg:not(.badge) { filter: grayscale(1) brightness(.75); opacity: .75; }
@@ -176,6 +180,7 @@
 
 <!-- Optionnel : liste écrite à la main, utilisée seulement sans serveur -->
 <script src="bureau.js"></script>
+<script src="jeux/jeux.js"></script>
 <script>
 (() => {
   const $ = (s, el = document) => el.querySelector(s);
@@ -202,6 +207,7 @@
     video: `<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="4" fill="#26363c"/><circle cx="32" cy="32" r="13" fill="#e8b84a"/><path d="M28 25l12 7-12 7z" fill="#26363c"/></svg>`,
     audio: `<svg viewBox="0 0 64 64"><rect x="8" y="8" width="48" height="48" rx="8" fill="#26363c"/><path d="M27 41V20l18-4v21" fill="none" stroke="#e8b84a" stroke-width="4" stroke-linejoin="round"/><circle cx="22" cy="42" r="6" fill="#e8b84a"/><circle cx="40" cy="38" r="6" fill="#e8b84a"/></svg>`,
     lock: `<svg class="badge" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="2.5" fill="#e8b84a" stroke="#1b2428" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#1b2428" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.8" fill="#1b2428"/></svg>`,
+    check: `<svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#3fae6a" stroke="#fff" stroke-width="1.5"/><path d="M6.5 12.5l3.8 3.8 7.2-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     other: `<svg viewBox="0 0 64 64"><path d="M14 6h26l12 12v38a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#e3dfd2"/><path d="M40 6l12 12H42a2 2 0 0 1-2-2z" fill="#b9b3a0"/></svg>`
   };
 
@@ -264,7 +270,8 @@
   function makeIcon(node, onOpen) {
     const b = document.createElement('button');
     b.className = 'icon';
-    b.innerHTML = '<div class="ico">' + ICONS[node.type] + '</div><span></span>';
+    const visuel = node.icone ? '<img src="' + node.icone + '" alt="" draggable="false">' : ICONS[node.type];
+    b.innerHTML = '<div class="ico">' + visuel + '</div><span></span>';
     $('span', b).textContent = node.name;
     b.title = node.name;
     b.addEventListener('click', () => {
@@ -429,30 +436,36 @@
     $('#empty').hidden = false;
   }
 
-  /* ---------- Dossier verrouillé ---------- */
-  const DOSSIER_VERROUILLE = 'nico';   // se débloque quand tous les autres dossiers ont été ouverts
-  const CLE = 'bureau-dossiers-vus';
-  if (location.search.includes('reset')) { try { localStorage.removeItem(CLE); } catch {} }
-  let vus = new Set();
-  try { vus = new Set(JSON.parse(localStorage.getItem(CLE) || '[]')); } catch {}
-  const sauver = () => { try { localStorage.setItem(CLE, JSON.stringify([...vus])); } catch {} };
+  /* ---------- Jeux et dossier verrouillé ---------- */
+  const DOSSIER_VERROUILLE = 'nico';   // se débloque quand les trois jeux sont terminés
+  const Jeux = window.Jeux || { apps: [], estTermine: () => false, tousTermines: () => false,
+    reinitialiser() {}, toutTerminer() {}, ouvrir() {} };
+  if (location.search.includes('reset')) Jeux.reinitialiser();        // ex. bureau.html?reset
+  if (location.search.includes('debloquer')) Jeux.toutTerminer();     // ex. bureau.html?debloquer (pour tester)
 
-  let dossiers = [], lockNode = null;
+  let lockNode = null;
   const boutons = new Map();
-  const estVerrouille = n => n === lockNode && !dossiers.filter(d => d !== lockNode).every(d => vus.has(d.name));
+  const estVerrouille = n => n === lockNode && !Jeux.tousTermines();
 
   function majVerrous() {
     boutons.forEach((btn, n) => {
+      if (n.app) btn.classList.toggle('done', Jeux.estTermine(n.app));
       const l = estVerrouille(n);
       btn.classList.toggle('locked', l);
-      btn.title = l ? n.name + ' (verrouillé)' : n.name;
+      if (n === lockNode) btn.title = l ? n.name + ' (verrouillé)' : n.name;
     });
   }
+  Jeux.onChange = id => {
+    majVerrous();
+    const app = Jeux.apps.find(a => a.id === id);
+    if (lockNode && Jeux.tousTermines()) toast('Les trois jeux sont terminés : le dossier « ' + lockNode.name + ' » est déverrouillé !');
+    else toast('Jeu terminé : ' + (app ? app.nom : id) + ' ✓');
+  };
 
   let toastTimer;
   function toast(txt) {
     const t = $('#toast'); t.textContent = txt; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4500);
   }
 
   function messageBox(titre, texte) {
@@ -461,31 +474,30 @@
       c.innerHTML = '<div class="msg"><p></p><button>OK</button></div>';
       $('p', c).textContent = texte;
       const ok = $('button', c); ok.onclick = () => $('.x', el).click(); ok.focus();
-    }, { w: 360, h: 180 });
+    }, { w: 360, h: 190 });
   }
 
   function ouvrirDepuisBureau(node) {
+    if (node.app) { Jeux.ouvrir(node.app, { openWindow }); return; }
     if (estVerrouille(node)) {
-      messageBox('Accès refusé', 'Ce dossier est verrouillé. Consulte d’abord tous les autres dossiers du bureau.');
+      messageBox('Accès refusé', 'Ce dossier est verrouillé. Termine d’abord les trois jeux du bureau.');
       return;
-    }
-    if (node.dir && node !== lockNode) {
-      const avant = lockNode && estVerrouille(lockNode);
-      vus.add(node.name); sauver(); majVerrous();
-      if (avant && !estVerrouille(lockNode)) toast('Le dossier « ' + lockNode.name + ' » est maintenant déverrouillé.');
     }
     openNode(node);
   }
 
   function showDesktop(list, url) {
     sortNodes(list);
-    dossiers = list.filter(n => n.dir);
-    lockNode = dossiers.find(n => n.name.toLowerCase() === DOSSIER_VERROUILLE) || null;
+    lockNode = list.find(n => n.dir && n.name.toLowerCase() === DOSSIER_VERROUILLE) || null;
+    const apps = Jeux.apps.map(a => ({
+      name: a.nom, dir: false, type: 'app', icone: a.icone, app: a.id, children: async () => []
+    }));
     boutons.clear();
-    desktop.replaceChildren(...list.map(n => {
+    desktop.replaceChildren(...[...list, ...apps].map(n => {
       const b = makeIcon(n, ouvrirDepuisBureau);
       boutons.set(n, b);
       if (n === lockNode) $('.ico', b).insertAdjacentHTML('beforeend', ICONS.lock);
+      if (n.app) $('.ico', b).insertAdjacentHTML('beforeend', ICONS.check);
       return b;
     }));
     majVerrous();
