@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon bureau</title>
+<style>
+  :root {
+    --wall-a: #14343f;
+    --wall-b: #1f5a63;
+    --wall-c: #3b7d6e;
+    --glass: rgba(14, 30, 36, .82);
+    --paper: #f6f4ee;
+    --line: #d6d1c3;
+    --ink: #1b2428;
+    --accent: #e8b84a;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 20% 15%, var(--wall-c) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 90%, #0d2229 0%, transparent 60%),
+      linear-gradient(135deg, var(--wall-a), var(--wall-b));
+    user-select: none;
+  }
+
+  /* ---------- Bureau ---------- */
+  #desktop {
+    position: absolute; inset: 0 0 48px 0;
+    padding: 16px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(auto-fill, 104px);
+    grid-auto-columns: 100px;
+    gap: 6px;
+    align-content: start;
+  }
+  .icon {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 8px 4px; border-radius: 6px; border: 1px solid transparent;
+    background: none; color: #fff; font: inherit; font-size: 13px;
+    cursor: default; text-align: center; width: 100%;
+  }
+  .icon span {
+    max-width: 92px; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    text-shadow: 0 1px 3px rgba(0,0,0,.7); word-break: break-word;
+  }
+  .icon svg { width: 52px; height: 52px; flex: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+  .icon:hover { background: rgba(255,255,255,.1); }
+  .icon:focus-visible, .icon.sel { outline: none; background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); }
+
+  #empty {
+    position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+    width: min(460px, 88vw); padding: 28px; border-radius: 10px;
+    background: var(--paper); box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    user-select: text;
+  }
+  #empty h1 { margin: 0 0 8px; font-size: 20px; }
+  #empty p { margin: 0; line-height: 1.55; font-size: 14px; }
+  #empty code { background: #e9e5d8; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+  /* ---------- Fenêtres ---------- */
+  .win {
+    position: absolute; display: flex; flex-direction: column;
+    background: var(--paper); border-radius: 8px; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.25);
+    min-width: 260px; min-height: 160px; resize: both;
+    animation: open .14s ease-out;
+  }
+  @keyframes open { from { transform: scale(.96); opacity: 0; } }
+  .win.min { display: none; }
+  .bar {
+    display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; height: 36px;
+    background: #e3dfd2; border-bottom: 1px solid var(--line); cursor: grab; flex: none;
+    touch-action: none;
+  }
+  .win:not(.top) .bar { background: #ebe8de; color: #77746a; }
+  .bar:active { cursor: grabbing; }
+  .bar b { flex: 1; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar button {
+    width: 30px; height: 26px; border: 0; background: none; border-radius: 4px;
+    font-size: 15px; cursor: pointer; color: inherit;
+  }
+  .bar button:hover { background: rgba(0,0,0,.1); }
+  .bar button.x:hover { background: #c9402b; color: #fff; }
+  .bar button:focus-visible { outline: 2px solid var(--ink); }
+  .path {
+    padding: 6px 12px; font-size: 12px; color: #5d5a50; border-bottom: 1px solid var(--line);
+    display: flex; gap: 8px; align-items: center; flex: none;
+  }
+  .path button { font: inherit; border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  .path button:disabled { opacity: .4; cursor: default; }
+  .body { flex: 1; overflow: auto; min-height: 0; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, 92px); gap: 4px; padding: 12px;
+  }
+  .grid .icon { color: var(--ink); }
+  .grid .icon span { text-shadow: none; }
+  .grid .icon:hover { background: rgba(0,0,0,.06); }
+  .grid .icon:focus-visible, .grid .icon.sel { background: rgba(232,184,74,.3); border-color: var(--accent); }
+  .grid .icon svg { filter: none; }
+  .note { padding: 24px; color: #6b685d; font-size: 14px; }
+  pre.txt {
+    margin: 0; padding: 16px; font: 14px/1.55 "Cascadia Mono", Consolas, monospace;
+    white-space: pre-wrap; word-break: break-word; user-select: text; color: var(--ink);
+  }
+  .media { display: grid; place-items: center; background: #101a1e; height: 100%; }
+  .media img, .media video { max-width: 100%; max-height: 100%; display: block; }
+
+  /* ---------- Barre des tâches ---------- */
+  #taskbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 48px;
+    background: var(--glass); backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.12);
+    display: flex; align-items: center; gap: 6px; padding: 0 10px; color: #fff;
+  }
+  #tasks { flex: 1; display: flex; gap: 6px; overflow-x: auto; }
+  .task {
+    font: inherit; font-size: 13px; color: #fff; background: rgba(255,255,255,.1);
+    border: 0; border-bottom: 3px solid transparent; border-radius: 5px;
+    padding: 6px 12px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+  }
+  .task:hover { background: rgba(255,255,255,.2); }
+  .task.on { border-bottom-color: var(--accent); background: rgba(255,255,255,.18); }
+  .task:focus-visible { outline: 2px solid var(--accent); }
+  #clock { font-size: 13px; text-align: right; line-height: 1.25; padding: 0 6px; }
+
+  @media (prefers-reduced-motion: reduce) { .win { animation: none; } }
+  @media (max-width: 600px) { .win { min-width: 0; } }
+</style>
+</head>
+<body>
+
+<main id="desktop" aria-label="Bureau"></main>
+
+<section id="empty" hidden>
+  <h1>Je cherche le dossier « bureau »</h1>
+  <p id="emptyMsg"></p>
+</section>
+
+<footer id="taskbar">
+  <div id="tasks" role="toolbar" aria-label="Fenêtres ouvertes"></div>
+  <div id="clock"></div>
+</footer>
+
+<!-- Optionnel : liste écrite à la main, utilisée seulement sans serveur -->
+<script src="bureau.js"></script>
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const desktop = $('#desktop'), tasks = $('#tasks');
+
+  /* ---------- Types de fichiers ---------- */
+  const EXT = {
+    image: ['png','jpg','jpeg','gif','webp','svg','bmp','avif'],
+    video: ['mp4','webm','ogg','mov','m4v'],
+    text:  ['txt','md','log','json','csv']
+  };
+  const typeOf = name => {
+    const e = name.split('.').pop().toLowerCase();
+    for (const t in EXT) if (EXT[t].includes(e)) return t;
+    return 'other';
+  };
+
+  /* ---------- Icônes ---------- */
+  const ICONS = {
+    folder: `<svg viewBox="0 0 64 64"><path d="M6 14a4 4 0 0 1 4-4h15l6 7h23a4 4 0 0 1 4 4v29a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z" fill="#d49f2c"/><path d="M6 24a4 4 0 0 1 4-4h44a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z" fill="#f0c24f"/></svg>`,
+    text: `<svg viewBox="0 0 64 64"><path d="M14 6h26l12 12v38a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#fff"/><path d="M40 6l12 12H42a2 2 0 0 1-2-2z" fill="#c9c4b4"/><path d="M20 28h24M20 35h24M20 42h16" stroke="#7b8a90" stroke-width="3" stroke-linecap="round"/></svg>`,
+    image: `<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="4" fill="#fff"/><rect x="12" y="16" width="40" height="32" rx="2" fill="#8fc7d6"/><circle cx="22" cy="26" r="4" fill="#f6e08a"/><path d="M12 48l12-14 8 9 7-6 13 11z" fill="#3b7d6e"/></svg>`,
+    video: `<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="4" fill="#26363c"/><circle cx="32" cy="32" r="13" fill="#e8b84a"/><path d="M28 25l12 7-12 7z" fill="#26363c"/></svg>`,
+    other: `<svg viewBox="0 0 64 64"><path d="M14 6h26l12 12v38a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#e3dfd2"/><path d="M40 6l12 12H42a2 2 0 0 1-2-2z" fill="#b9b3a0"/></svg>`
+  };
+
+  /* ---------- Sources de données ---------- */
+  // Un « nœud » : { name, dir, type, children(), url(), text(), frame }
+
+  // 1) Avec un serveur (Live Server de VS Code, etc.) : on lit la liste affichée par le serveur
+  function serverNode(url, name, dir) {
+    return {
+      name, dir, type: dir ? 'folder' : typeOf(name),
+      async children() {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        const base = new URL(url);
+        const basePath = base.pathname.endsWith('/') ? base.pathname : base.pathname + '/';
+        const seen = new Set(), out = [];
+        doc.querySelectorAll('a[href]').forEach(a => {
+          const href = a.getAttribute('href');
+          if (!href || href.startsWith('?') || href.startsWith('#')) return;
+          let u;
+          try { u = new URL(href, base); } catch { return; }
+          if (u.origin !== base.origin) return;
+          if (!u.pathname.startsWith(basePath) || u.pathname === basePath) return;
+          const rest = u.pathname.slice(basePath.length).replace(/\/$/, '');
+          if (!rest || rest.includes('/') || seen.has(rest)) return;
+          seen.add(rest);
+          const isDir = u.pathname.endsWith('/') || a.classList.contains('icon-directory');
+          u.search = ''; u.hash = '';
+          if (isDir && !u.pathname.endsWith('/')) u.pathname += '/';
+          out.push(serverNode(u.href, decodeURIComponent(rest), isDir));
+        });
+        return out;
+      },
+      url: async () => url,
+      text: async () => (await fetch(url)).text()
+    };
+  }
+
+  // 2) Sans serveur : liste écrite à la main dans bureau.js
+  function manifestNode(entry, path) {
+    if (typeof entry === 'string') entry = { name: entry };
+    const dir = Array.isArray(entry.children);
+    const full = path + entry.name + (dir ? '/' : '');
+    return {
+      name: entry.name, dir, type: dir ? 'folder' : typeOf(entry.name), frame: true,
+      children: async () => (entry.children || []).map(c => manifestNode(c, full)),
+      url: async () => encodeURI(full),
+      text: async () => { throw new Error('lecture directe impossible'); }
+    };
+  }
+
+  const sortNodes = list => list.sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, 'fr', { numeric: true }));
+
+  /* ---------- Icônes cliquables ---------- */
+  function makeIcon(node, onOpen) {
+    const b = document.createElement('button');
+    b.className = 'icon';
+    b.innerHTML = ICONS[node.type] + '<span></span>';
+    $('span', b).textContent = node.name;
+    b.title = node.name;
+    b.addEventListener('click', () => {
+      b.parentElement.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+    });
+    b.addEventListener('dblclick', () => onOpen(node));
+    b.addEventListener('keydown', e => { if (e.key === 'Enter') onOpen(node); });
+    return b;
+  }
+
+  /* ---------- Fenêtres ---------- */
+  let z = 10, offset = 0;
+  const wins = new Set();
+
+  function focusWin(w) {
+    wins.forEach(x => {
+      x.el.classList.toggle('top', x === w);
+      x.task.classList.toggle('on', x === w && !x.el.classList.contains('min'));
+    });
+    w.el.style.zIndex = ++z;
+  }
+
+  function openWindow(title, build) {
+    const el = document.createElement('div');
+    el.className = 'win';
+    const W = Math.min(560, innerWidth - 24), H = Math.min(400, innerHeight - 80);
+    el.style.width = W + 'px'; el.style.height = H + 'px';
+    el.style.left = Math.min(140 + offset, Math.max(8, innerWidth - W - 8)) + 'px';
+    el.style.top = Math.min(40 + offset, Math.max(8, innerHeight - H - 60)) + 'px';
+    offset = (offset + 28) % 140;
+    el.innerHTML = `<div class="bar"><b></b><button class="m" aria-label="Réduire">–</button><button class="x" aria-label="Fermer">✕</button></div><div class="content" style="display:contents"></div>`;
+    $('b', el).textContent = title;
+    const task = document.createElement('button');
+    task.className = 'task'; task.textContent = title;
+    tasks.appendChild(task);
+    const w = { el, task };
+    wins.add(w);
+    document.body.appendChild(el);
+
+    const close = () => { wins.delete(w); el.remove(); task.remove(); w.cleanup && w.cleanup(); };
+    $('.x', el).onclick = close;
+    $('.m', el).onclick = () => { el.classList.add('min'); task.classList.remove('on'); };
+    task.onclick = () => {
+      if (el.classList.contains('min')) { el.classList.remove('min'); focusWin(w); }
+      else if (el.classList.contains('top')) { el.classList.add('min'); task.classList.remove('on'); }
+      else focusWin(w);
+    };
+    el.addEventListener('pointerdown', () => focusWin(w));
+
+    // Déplacement par la barre de titre
+    const bar = $('.bar', el);
+    bar.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      const dx = e.clientX - el.offsetLeft, dy = e.clientY - el.offsetTop;
+      bar.setPointerCapture(e.pointerId);
+      const move = ev => {
+        el.style.left = Math.max(-el.offsetWidth + 80, Math.min(innerWidth - 80, ev.clientX - dx)) + 'px';
+        el.style.top = Math.max(0, Math.min(innerHeight - 90, ev.clientY - dy)) + 'px';
+      };
+      const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); };
+      bar.addEventListener('pointermove', move);
+      bar.addEventListener('pointerup', up);
+    });
+
+    build(el, w);
+    focusWin(w);
+    return w;
+  }
+
+  /* ---------- Ouverture d'un élément ---------- */
+  function openNode(node) {
+    if (node.dir) return openFolder(node);
+    if (node.type === 'image') return openMedia(node, 'img');
+    if (node.type === 'video') return openMedia(node, 'video');
+    openText(node); // textes, et tentative en texte pour les autres fichiers
+  }
+
+  function openFolder(root) {
+    openWindow(root.name, (el, w) => {
+      const stack = [root];
+      const content = $('.content', el);
+      content.innerHTML = `<div class="path"><button class="up" aria-label="Dossier parent">↑</button><span class="where"></span></div><div class="body"></div>`;
+      const up = $('.up', content), where = $('.where', content), body = $('.body', content);
+
+      async function show() {
+        const cur = stack[stack.length - 1];
+        where.textContent = stack.map(n => n.name).join(' / ');
+        up.disabled = stack.length < 2;
+        w.task.textContent = cur.name; $('b', el).textContent = cur.name;
+        body.innerHTML = '<div class="note">Chargement…</div>';
+        try {
+          const list = sortNodes(await cur.children());
+          if (!list.length) { body.innerHTML = '<div class="note">Ce dossier est vide.</div>'; return; }
+          const grid = document.createElement('div'); grid.className = 'grid';
+          list.forEach(n => grid.appendChild(makeIcon(n, x => {
+            if (x.dir) { stack.push(x); show(); } else openNode(x);
+          })));
+          body.replaceChildren(grid);
+        } catch {
+          body.innerHTML = '<div class="note">Impossible de lire ce dossier.</div>';
+        }
+      }
+      up.onclick = () => { if (stack.length > 1) { stack.pop(); show(); } };
+      show();
+    });
+  }
+
+  function openText(node) {
+    openWindow(node.name, async el => {
+      const content = $('.content', el);
+      content.innerHTML = '<div class="body"><div class="note">Chargement…</div></div>';
+      const body = $('.body', content);
+      try {
+        if (node.frame) {   // ouvert en double-clic : le navigateur affiche le fichier lui-même
+          const f = document.createElement('iframe');
+          f.src = await node.url();
+          f.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
+          body.replaceChildren(f);
+          return;
+        }
+        const t = await node.text();
+        const pre = document.createElement('pre'); pre.className = 'txt';
+        pre.textContent = t || '(fichier vide)';
+        body.replaceChildren(pre);
+      } catch { body.innerHTML = '<div class="note">Impossible de lire ce fichier.</div>'; }
+    });
+  }
+
+  function openMedia(node, tag) {
+    openWindow(node.name, async (el, w) => {
+      const content = $('.content', el);
+      content.innerHTML = '<div class="body"><div class="media"></div></div>';
+      const m = document.createElement(tag);
+      m.src = await node.url();
+      if (tag === 'video') { m.controls = true; m.autoplay = true; }
+      else m.alt = node.name;
+      $('.media', content).appendChild(m);
+      w.cleanup = () => { if (tag === 'video') m.pause(); };
+    });
+  }
+
+  /* ---------- Démarrage du bureau ---------- */
+  function showHelp(html) { $('#emptyMsg').innerHTML = html; $('#empty').hidden = false; }
+
+  function showDesktop(list) {
+    sortNodes(list);
+    desktop.replaceChildren(...list.map(n => makeIcon(n, openNode)));
+    $('#empty').hidden = true;
+    if (!list.length) showHelp('Le dossier <code>bureau</code> est vide. Ajoute-y des dossiers, textes, images ou vidéos.');
+  }
+
+  desktop.addEventListener('click', e => {
+    if (e.target === desktop) desktop.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
+  });
+
+  async function start() {
+    // 1) Avec un serveur (Live Server) : lecture automatique du dossier
+    try {
+      const root = serverNode(new URL('bureau/', location.href).href, 'bureau', true);
+      showDesktop(await root.children());
+      return;
+    } catch {}
+    // 2) Sans serveur : liste écrite dans bureau.js
+    if (Array.isArray(window.BUREAU)) {
+      showDesktop(window.BUREAU.map(e => manifestNode(e, 'bureau/')));
+      return;
+    }
+    showHelp('Ouvre cette page avec <b>Live Server</b> (clic droit sur <code>index.html</code> dans VS Code, puis « Open with Live Server ») pour que le bureau lise ton dossier <code>bureau</code> automatiquement.<br><br>Sans serveur, crée un fichier <code>bureau.js</code> à côté de cette page pour y lister le contenu du dossier.');
+  }
+
+  /* ---------- Horloge ---------- */
+  const tick = () => {
+    const d = new Date();
+    $('#clock').innerHTML = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) +
+      '<br>' + d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  tick(); setInterval(tick, 15000);
+
+  start();
+})();
+</script>
+</body>
+</html>
