@@ -274,11 +274,14 @@
     b.innerHTML = '<div class="ico">' + visuel + '</div><span></span>';
     $('span', b).textContent = node.name;
     b.title = node.name;
+    // les jeux (et tout, sur écran tactile) s'ouvrent en un seul clic ; le reste en double-clic
+    const simple = () => !!node.app || matchMedia('(pointer: coarse)').matches;
     b.addEventListener('click', () => {
       b.parentElement.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
+      if (simple()) onOpen(node);
     });
-    b.addEventListener('dblclick', () => onOpen(node));
+    b.addEventListener('dblclick', () => { if (!simple()) onOpen(node); });
     b.addEventListener('keydown', e => { if (e.key === 'Enter') onOpen(node); });
     return b;
   }
