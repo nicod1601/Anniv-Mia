@@ -220,7 +220,11 @@
       name: entry.name, dir, type: dir ? 'folder' : typeOf(entry.name), frame: true,
       children: async () => (entry.children || []).map(c => manifestNode(c, full)),
       url: async () => encodeURI(full),
-      text: async () => { throw new Error('lecture directe impossible'); }
+      text: async () => {
+        const r = await fetch(encodeURI(full));
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      }
     };
   }
 
@@ -345,18 +349,18 @@
       content.innerHTML = '<div class="body"><div class="note">Chargement…</div></div>';
       const body = $('.body', content);
       try {
-        if (node.frame) {   // ouvert en double-clic : le navigateur affiche le fichier lui-même
-          const f = document.createElement('iframe');
-          f.src = await node.url();
-          f.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
-          body.replaceChildren(f);
-          return;
-        }
         const t = await node.text();
         const pre = document.createElement('pre'); pre.className = 'txt';
         pre.textContent = t || '(fichier vide)';
         body.replaceChildren(pre);
-      } catch { body.innerHTML = '<div class="note">Impossible de lire ce fichier.</div>'; }
+        return;
+      } catch {}
+      if (node.frame) {   // ouvert en double-clic : le navigateur affiche le fichier lui-même
+        const f = document.createElement('iframe');
+        f.src = await node.url();
+        f.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
+        body.replaceChildren(f);
+      } else body.innerHTML = '<div class="note">Impossible de lire ce fichier.</div>';
     });
   }
 
@@ -396,19 +400,19 @@
   });
 
   async function start() {
-    // 1) Avec un serveur (Live Server) : lecture automatique du dossier
-    try {
-      const rootUrl = new URL('bureau/', location.href).href;
-      const root = serverNode(rootUrl, 'bureau', true);
-      showDesktop(await root.children(), rootUrl);
-      return;
-    } catch {}
-    // 2) Sans serveur : liste écrite dans bureau.js
-    if (Array.isArray(window.BUREAU)) {
-      showDesktop(window.BUREAU.map(e => manifestNode(e, 'bureau/')));
-      return;
+    const rootUrl = new URL('bureau/', location.href).href;
+    let list = [];
+    // 1) Serveur qui affiche la liste des fichiers (Live Server) : lecture automatique
+    try { list = await serverNode(rootUrl, 'bureau', true).children(); } catch {}
+    // 2) Sinon (Netlify, double-clic…) : liste écrite dans bureau.js
+    if (!list.length && Array.isArray(window.BUREAU)) {
+      list = window.BUREAU.map(e => manifestNode(e, 'bureau/'));
     }
-    showHelp('Ouvre cette page avec <b>Live Server</b> (clic droit sur <code>index.html</code> dans VS Code, puis « Open with Live Server ») pour que le bureau lise ton dossier <code>bureau</code> automatiquement.<br><br>Sans serveur, crée un fichier <code>bureau.js</code> à côté de cette page pour y lister le contenu du dossier.');
+    if (list.length) return showDesktop(list);
+    showHelp(
+      'Je n’ai trouvé ni liste de fichiers, ni <code>bureau.js</code>.<br><br>' +
+      'Lance <code>node generer.js</code> pour créer <code>bureau.js</code> à partir de ton dossier <code>bureau</code>, ou ouvre la page avec Live Server.',
+      'Dossier « bureau » introuvable');
   }
 
   /* ---------- Horloge ---------- */

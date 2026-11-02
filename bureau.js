@@ -1,13 +1,15 @@
-// Utilisé seulement si tu ouvres index.html en double-clic (sans Live Server).
-// Un dossier = { name: 'nom', children: [ ... ] }   Un fichier = 'nom.ext'
+// Fichier généré par generer.js : ne pas modifier à la main.
 window.BUREAU = [
-  { name: 'mia', children: [
-    'notes.txt',
-    'photo.jpg'
-  ]},
-  { name: 'nico', children: [
-    'idees.txt',
-    'video.mp4'
-  ]},
-  'lisez-moi.txt'
+  {
+    "name": "mia",
+    "children": [
+      "Nouveau Document texte.txt"
+    ]
+  },
+  {
+    "name": "nico",
+    "children": [
+      "Nouveau Document texte.txt"
+    ]
+  }
 ];
