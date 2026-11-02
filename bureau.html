@@ -374,13 +374,21 @@
   }
 
   /* ---------- Démarrage du bureau ---------- */
-  function showHelp(html) { $('#emptyMsg').innerHTML = html; $('#empty').hidden = false; }
+  function showHelp(html, title) {
+    $('#empty h1').textContent = title || 'Je cherche le dossier « bureau »';
+    $('#emptyMsg').innerHTML = html;
+    $('#empty').hidden = false;
+  }
 
-  function showDesktop(list) {
+  function showDesktop(list, url) {
     sortNodes(list);
     desktop.replaceChildren(...list.map(n => makeIcon(n, openNode)));
     $('#empty').hidden = true;
-    if (!list.length) showHelp('Le dossier <code>bureau</code> est vide. Ajoute-y des dossiers, textes, images ou vidéos.');
+    if (!list.length) showHelp(
+      'Le navigateur a bien trouvé le serveur, mais aucun élément dans le dossier <code>bureau</code>.' +
+      (url ? '<br><br>Adresse lue : <a href="' + url + '" target="_blank" rel="noopener">' + url + '</a><br>Clique dessus : tu dois y voir la liste de tes fichiers et dossiers.' : '') +
+      '<br><br>Vérifie que le dossier <code>bureau</code> contient au moins un élément et qu’il est à côté de <code>bureau.html</code>.',
+      'Le dossier « bureau » semble vide');
   }
 
   desktop.addEventListener('click', e => {
@@ -390,8 +398,9 @@
   async function start() {
     // 1) Avec un serveur (Live Server) : lecture automatique du dossier
     try {
-      const root = serverNode(new URL('bureau/', location.href).href, 'bureau', true);
-      showDesktop(await root.children());
+      const rootUrl = new URL('bureau/', location.href).href;
+      const root = serverNode(rootUrl, 'bureau', true);
+      showDesktop(await root.children(), rootUrl);
       return;
     } catch {}
     // 2) Sans serveur : liste écrite dans bureau.js
