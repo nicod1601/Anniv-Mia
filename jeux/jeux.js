@@ -8,30 +8,32 @@
   'use strict';
 
   /* =====================================================================
-     RÉGLAGES DES TIRAGES  (tout se modifie ici)
-     - poids   : pour le grand prix, c'est son % de chance de base.
-                 Pour les autres, ce sont des poids relatifs entre eux.
-     - etoiles : 4 ou 5 (couleur de la carte)
-     - gif     : l'animation de tirage (facultatif)
-     - fin     : image fixe affichée à la fin de l'animation (facultatif)
-     - duree   : durée du GIF en secondes
-     - doux    : à partir de ce tirage sans grand prix, la chance monte
-     - garantie: au tirage n° garantie, le grand prix est assuré
+     RÉGLAGES DES TIRAGES  (tout se modifie ici) — système façon Genshin
+     - taux5      : % de chance de base d'obtenir un 5★ à chaque souhait
+     - doux       : à partir de ce souhait sans 5★, la chance de 5★ monte
+     - garantie   : au souhait n° garantie, un 5★ est assuré
+     - chanceGrand: chance (0 à 1) qu'un 5★ soit le grand prix (le « 50/50 »).
+                    Si le 5★ est l'autre (perdant), le prochain 5★ est le grand prix à coup sûr.
+     Récompenses :
+     - grand : true   → le grand prix (finir le jeu = l'obtenir)
+     - perdant : true → l'autre 5★ (celui du 50/50 perdu)
+     - 4★             → poids relatifs entre eux
+     - gif / fin / duree : animation, image fixe de fin, durée du GIF en secondes (facultatifs)
      ===================================================================== */
   const GENSHIN = {
     id: 'genshin', nom: 'Genshin Impact', titre: 'Souhait des voyageurs',
     accroche: 'Fais un vœu et découvre qui répond à l’appel…',
     icone: 'jeux/icones/genshin.webp',
     theme: { fond: '#0f1a36', fond2: '#233763', accent: '#f0cd8a', encre: '#2a1d05' },
-    doux: 20, garantie: 30,
+    taux5: 1, doux: 65, garantie: 80, chanceGrand: 0.5,
     recompenses: [
-      { id: 'hutao',   nom: 'Hu Tao',  etoiles: 5, poids: 3,  grand: true,
+      { id: 'hutao',   nom: 'Hu Tao',  etoiles: 5, grand: true,
         gif: 'jeux/genshin/hutao.gif', fin: 'jeux/genshin/hutao.webp', duree: 11.1 },
-      { id: 'mona',    nom: 'Mona',    etoiles: 5, poids: 21,
+      { id: 'mona',    nom: 'Mona',    etoiles: 5, perdant: true,
         gif: 'jeux/genshin/mona.gif',  fin: 'jeux/genshin/mona.webp',  duree: 11.1 },
-      { id: 'bennett', nom: 'Bennett', etoiles: 4, poids: 38,
+      { id: 'bennett', nom: 'Bennett', etoiles: 4, poids: 50,
         gif: 'jeux/genshin/benet.gif', fin: 'jeux/genshin/benet.webp', duree: 11.1 },
-      { id: 'noelle',  nom: 'Noelle',  etoiles: 4, poids: 38,
+      { id: 'noelle',  nom: 'Noelle',  etoiles: 4, poids: 50,
         gif: 'jeux/genshin/noel.gif',  fin: 'jeux/genshin/noel.webp',  duree: 11.1 }
     ]
   };
@@ -40,19 +42,42 @@
   // (tant qu'il n'y a pas de gif/fin, le jeu utilise une animation et des cartes simples)
   const HSR = {
     id: 'hsr', nom: 'Honkai: Star Rail', titre: 'Warp des étoiles',
-    accroche: 'Lance un Warp et vois qui monte à bord du Express…',
+    accroche: 'Lance un Warp et vois qui monte à bord de l’Express…',
     icone: 'jeux/icones/honkai.webp',
     theme: { fond: '#150f2e', fond2: '#33256b', accent: '#c9a7ff', encre: '#1c0f3d' },
-    doux: 20, garantie: 30,
+    taux5: 1, doux: 65, garantie: 80, chanceGrand: 0.5,
     recompenses: [
-      { id: 'grand', nom: 'Grand prix (5★)', etoiles: 5, poids: 3, grand: true },
-      { id: 'cinq',  nom: 'Personnage 5★',   etoiles: 5, poids: 21 },
-      { id: 'quatreA', nom: 'Personnage 4★ (A)', etoiles: 4, poids: 38 },
-      { id: 'quatreB', nom: 'Personnage 4★ (B)', etoiles: 4, poids: 38 }
+      { id: 'grand',   nom: 'Grand prix (5★)',   etoiles: 5, grand: true },
+      { id: 'perdant', nom: 'Autre 5★',          etoiles: 5, perdant: true },
+      { id: 'quatreA', nom: 'Personnage 4★ (A)', etoiles: 4, poids: 50 },
+      { id: 'quatreB', nom: 'Personnage 4★ (B)', etoiles: 4, poids: 50 }
     ]
   };
 
   /* ===================================================================== */
+
+  /* Un tirage. `etat` = { sans, garanti, total, inv } est modifié sur place. */
+  function tirerRecompense(cfg, etat, hasard = Math.random) {
+    const grand = cfg.recompenses.find(r => r.grand);
+    const perdant = cfg.recompenses.find(r => r.perdant);
+    const quatre = cfg.recompenses.filter(r => !r.grand && !r.perdant);
+    const n = etat.sans + 1;                        // numéro du souhait depuis le dernier 5★
+    let p = cfg.taux5 / 100;
+    if (n >= cfg.garantie) p = 1;
+    else if (n > cfg.doux) p += (n - cfg.doux) / (cfg.garantie - cfg.doux) * (1 - p);
+    let r;
+    if (hasard() < p) {                             // c'est un 5★
+      etat.sans = 0;
+      if (etat.garanti || hasard() < cfg.chanceGrand) { r = grand; etat.garanti = false; }
+      else { r = perdant; etat.garanti = true; }    // 50/50 perdu : le prochain 5★ est garanti
+    } else {
+      let t = hasard() * quatre.reduce((s, x) => s + x.poids, 0);
+      r = quatre.find(x => (t -= x.poids) < 0) || quatre[quatre.length - 1];
+      etat.sans = n;
+    }
+    etat.total++; etat.inv[r.id] = (etat.inv[r.id] || 0) + 1;
+    return r;
+  }
 
   const IDS = ['discord', 'genshin', 'hsr'];
   const CLE_FINI = 'bureau-jeux-termines';
@@ -94,6 +119,7 @@
       return ouvrirDiscord(ctx);
     }
   };
+  API._test = { tirerRecompense, GENSHIN, HSR };   // utilisé seulement pour vérifier les taux
   window.Jeux = API;
 
   /* ---------- Discord : à venir ---------- */
@@ -124,27 +150,14 @@
 
   function ouvrirGacha(cfg, ctx) {
     const grand = cfg.recompenses.find(r => r.grand);
-    const autres = cfg.recompenses.filter(r => !r.grand);
-    const sommeAutres = autres.reduce((s, r) => s + r.poids, 0);
-    const etat = Object.assign({ sans: 0, total: 0, inv: {} }, store.lire(CLES_GACHA(cfg.id), {}));
+    const perdant = cfg.recompenses.find(r => r.perdant);
+    const quatre = cfg.recompenses.filter(r => !r.grand && !r.perdant);
+    const sommeQuatre = quatre.reduce((x, r) => x + r.poids, 0);
+    const etat = Object.assign({ sans: 0, garanti: false, total: 0, inv: {} }, store.lire(CLES_GACHA(cfg.id), {}));
     const sauver = () => store.ecrire(CLES_GACHA(cfg.id), etat);
-
-    function tirerUn() {
-      const n = etat.sans + 1;
-      let p = grand.poids / 100;
-      if (n >= cfg.garantie) p = 1;
-      else if (n > cfg.doux) p += (n - cfg.doux) / (cfg.garantie - cfg.doux) * (1 - p);
-      let r;
-      if (Math.random() < p) { r = grand; etat.sans = 0; }
-      else {
-        let t = Math.random() * sommeAutres;
-        r = autres.find(x => (t -= x.poids) < 0) || autres[autres.length - 1];
-        etat.sans = n;
-      }
-      etat.total++; etat.inv[r.id] = (etat.inv[r.id] || 0) + 1;
-      return r;
-    }
-    const tauxDe = r => r.grand ? grand.poids : (100 - grand.poids) * r.poids / sommeAutres;
+    const tirerUn = () => tirerRecompense(cfg, etat);
+    const tauxDe = r => r.grand || r.perdant ? cfg.taux5 * (r.grand ? cfg.chanceGrand : 1 - cfg.chanceGrand)
+                                             : (100 - cfg.taux5) * r.poids / sommeQuatre;
 
     ctx.openWindow(cfg.nom, (el, w) => {
       const t = cfg.theme;
@@ -156,6 +169,7 @@
              <span class="chip" data-r="fini" hidden>✓ Terminé</span>
              <span class="chip" data-r="total"></span>
              <span class="chip" data-r="garantie"></span>
+             <span class="chip" data-r="cinqcinq"></span>
            </div>
            <div class="jeu-stage" data-r="stage" aria-live="polite"></div>
            <div class="jeu-actions" data-r="actions"></div>
@@ -167,7 +181,8 @@
 
       function majStats() {
         $r('total').textContent = 'Souhaits : ' + etat.total;
-        $r('garantie').textContent = 'Garantie : ' + etat.sans + ' / ' + cfg.garantie;
+        $r('garantie').textContent = 'Garantie 5★ : ' + etat.sans + ' / ' + cfg.garantie;
+        $r('cinqcinq').textContent = etat.garanti ? 'Prochain 5★ : ' + grand.nom + ' garanti' : '50/50';
         $r('fini').hidden = !API.estTermine(cfg.id);
       }
 
@@ -201,7 +216,8 @@
                <img class="hero-icone" src="${cfg.icone}" alt="">
                <h2>${esc(cfg.titre)}</h2><p>${esc(cfg.accroche)}</p>
                <ul class="taux">${lignes}</ul>
-               <p class="garantie-txt">${esc(grand.nom)} est garanti(e) au ${cfg.garantie}<sup>e</sup> souhait sans l’obtenir.</p>
+               <p class="garantie-txt">Un 5★ est garanti au plus tard au ${cfg.garantie}<sup>e</sup> souhait.<br>
+                 Chaque 5★ a ${Math.round(cfg.chanceGrand * 100)} % de chance d’être ${esc(grand.nom)}. Si c’est ${esc(perdant.nom)}, le prochain 5★ sera ${esc(grand.nom)} à coup sûr.</p>
              </div></div>`;
       }
 
@@ -230,10 +246,10 @@
         stage.innerHTML = '<div class="resume">' + uniques.map(r => tuile(r, compte[r.id])).join('') + '</div>';
       }
 
-      function banniere() {
+      function banniere(texte) {
         const b = document.createElement('div');
         b.className = 'objectif';
-        b.textContent = '✓ Objectif atteint : ' + grand.nom + ' !';
+        b.textContent = texte;
         stage.appendChild(b);
         const liste = stage.querySelector('.resume');
         if (liste) liste.style.paddingTop = '66px';   // la bannière ne cache pas les cartes
@@ -273,15 +289,19 @@
         for (let i = 0; i < nb; i++) liste.push(tirerUn());
         sauver();
         // comme dans le jeu : on joue l'animation du meilleur résultat
-        const meilleur = [...liste].sort((a, b) => (b.grand ? 1 : 0) - (a.grand ? 1 : 0) || b.etoiles - a.etoiles)[0];
+        const rang = r => (r.grand ? 2 : 0) + r.etoiles;
+        const meilleur = [...liste].sort((a, b) => rang(b) - rang(a))[0];
         const gagne = liste.includes(grand);
+        const perdu5050 = !gagne && etat.garanti && liste.includes(perdant);
         animer(meilleur, () => {
           if (nb === 1) voirResultat(liste[0]); else voirResume(liste);
           if (gagne) {
             const premiere = !API.estTermine(cfg.id);
             API.marquer(cfg.id);
             majStats();
-            if (premiere) banniere();
+            if (premiere) banniere('✓ Objectif atteint : ' + grand.nom + ' !');
+          } else if (perdu5050) {
+            banniere('50/50 perdu… le prochain 5★ sera ' + grand.nom + ' !');
           }
         });
       }
