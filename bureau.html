@@ -26,6 +26,8 @@
       radial-gradient(ellipse at 85% 90%, #0d2229 0%, transparent 60%),
       linear-gradient(135deg, var(--wall-a), var(--wall-b));
     user-select: none;
+    background-image: url(i.jpg);
+    background-size: cover;
   }
 
   /* ---------- Bureau ---------- */
@@ -170,6 +172,14 @@
   <h1>Je cherche le dossier « bureau »</h1>
   <p id="emptyMsg"></p>
 </section>
+
+<!-- Formulaire invisible : Netlify le détecte et reçoit les réponses du quiz Discord -->
+<form name="quiz-discord" method="POST" data-netlify="true" hidden>
+  <input type="hidden" name="form-name" value="quiz-discord">
+  <input name="joueuse"><textarea name="reponses"></textarea>
+  <input name="q1"><input name="q2"><input name="q3"><input name="q4"><input name="q5">
+  <input name="q6"><input name="q7"><input name="q8">
+</form>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
