@@ -1,0 +1,2 @@
+Mets ici une photo de vous deux sous le nom : nous.jpg (ou nous.png, nous.webp).
+Elle devient le fond d'ecran du bureau. Sans photo, le bureau garde son degrade turquoise.

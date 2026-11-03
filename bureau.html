@@ -26,8 +26,6 @@
       radial-gradient(ellipse at 85% 90%, #0d2229 0%, transparent 60%),
       linear-gradient(135deg, var(--wall-a), var(--wall-b));
     user-select: none;
-    background-image: url(i.jpg);
-    background-size: cover;
   }
 
   /* ---------- Bureau ---------- */
@@ -160,7 +158,56 @@
   .task:focus-visible { outline: 2px solid var(--accent); }
   #clock { font-size: 13px; text-align: right; line-height: 1.25; padding: 0 6px; }
 
-  @media (prefers-reduced-motion: reduce) { .win { animation: none; } }
+  /* ----- barre des tâches : boutons son / fond ----- */
+  .tb-btn { font: inherit; font-size: 15px; color: #fff; background: rgba(255,255,255,.1); border: 0; border-radius: 5px; width: 34px; height: 32px; cursor: pointer; flex: none; }
+  .tb-btn:hover { background: rgba(255,255,255,.22); }
+  .tb-btn:focus-visible { outline: 2px solid var(--accent); }
+  #clock { cursor: default; border-radius: 5px; padding: 3px 8px; }
+  #clock:hover { background: rgba(255,255,255,.08); }
+  #clock:focus-visible { outline: 2px solid var(--accent); }
+
+  /* ----- menu du fond d'écran ----- */
+  #menu-fond {
+    position: fixed; z-index: 99990; min-width: 230px; padding: 6px; background: var(--paper); color: var(--ink);
+    border-radius: 10px; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.2); user-select: none;
+  }
+  #menu-fond[hidden] { display: none; }
+  .menu-titre { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #77746a; padding: 6px 10px 4px; }
+  #menu-fond button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; color: inherit; background: none; border: 0; border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+  #menu-fond button:hover, #menu-fond button:focus-visible { background: rgba(232,184,74,.3); outline: none; }
+  #menu-fond button.actif::after { content: " ✓"; color: #3fae6a; font-weight: 700; }
+
+  /* ----- bloc-notes caché ----- */
+  .bn { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+  .bn-menu { display: flex; gap: 14px; padding: 4px 12px; font-size: 13px; border-bottom: 1px solid var(--line); background: #f3f1ea; color: #4b483f; flex: none; }
+  .bn-zone { flex: 1; min-height: 0; width: 100%; border: 0; outline: none; resize: none; padding: 14px 16px; font: 15px/1.6 "Cascadia Mono", Consolas, monospace; color: var(--ink); background: #fff; user-select: text; }
+
+  /* ----- le dossier débloqué brille ----- */
+  .icon.pulse .ico { animation: lueur 1.6s ease-in-out infinite; }
+  @keyframes lueur { 50% { filter: drop-shadow(0 0 14px #ffd36a) drop-shadow(0 0 4px #fff); } }
+
+  /* ----- écran de fête ----- */
+  #fete {
+    position: fixed; inset: 0; z-index: 100000; display: grid; place-items: center; padding: 20px;
+    background: rgba(6,16,20,.8); backdrop-filter: blur(6px); animation: fondu .4s ease-out;
+  }
+  #fete[hidden] { display: none; }
+  #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .fete-carte {
+    position: relative; max-width: 460px; text-align: center; color: #fff; padding: 34px 30px 28px;
+    background: linear-gradient(160deg, #1d2d3b, #151f28); border: 1px solid rgba(255,211,106,.55); border-radius: 18px;
+    box-shadow: 0 20px 70px rgba(0,0,0,.6), 0 0 70px rgba(255,211,106,.18);
+    animation: pop2 .65s cubic-bezier(.2,1.3,.4,1);
+  }
+  .fete-etoile { font-size: 46px; line-height: 1; color: #ffd36a; text-shadow: 0 0 24px rgba(255,211,106,.8); }
+  .fete-carte h2 { margin: 10px 0 12px; font-size: 27px; }
+  .fete-carte p { margin: 0 0 22px; line-height: 1.65; opacity: .92; white-space: pre-line; }
+  #fete-btn { font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; border: 0; border-radius: 999px; padding: 12px 30px; background: #ffd36a; color: #2a1d05; }
+  #fete-btn:hover { filter: brightness(1.08); }
+  #fete-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  @keyframes pop2 { from { transform: scale(.7); opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) { .win { animation: none; } .icon.pulse .ico, .fete-carte, #fete { animation: none; } }
   @media (max-width: 600px) { .win { min-width: 0; } }
 </style>
 </head>
@@ -183,18 +230,41 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<div id="menu-fond" role="menu" aria-label="Fond d’écran" hidden></div>
+<input type="file" id="fond-fichier" accept="image/*" hidden>
+
+<div id="fete" role="dialog" aria-modal="true" aria-labelledby="fete-titre" hidden>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="fete-carte">
+    <div class="fete-etoile" aria-hidden="true">★</div>
+    <h2 id="fete-titre"></h2>
+    <p id="fete-texte"></p>
+    <button type="button" id="fete-btn"></button>
+  </div>
+</div>
+
 <footer id="taskbar">
   <div id="tasks" role="toolbar" aria-label="Fenêtres ouvertes"></div>
-  <div id="clock"></div>
+  <button type="button" class="tb-btn" id="btn-fond" aria-label="Changer le fond d’écran" title="Fond d’écran">🖼</button>
+  <button type="button" class="tb-btn" id="btn-son" aria-label="Couper ou remettre le son" title="Son">🔊</button>
+  <div id="clock" role="button" tabindex="0" aria-label="Horloge"></div>
 </footer>
 
 <!-- Optionnel : liste écrite à la main, utilisée seulement sans serveur -->
 <script src="bureau.js"></script>
+<script src="perso.js"></script>
+<script src="sons.js"></script>
+<script src="succes.js"></script>
 <script src="jeux/jeux.js"></script>
 <script>
 (() => {
   const $ = (s, el = document) => el.querySelector(s);
   const desktop = $('#desktop'), tasks = $('#tasks');
+  const son = n => { try { window.Sons && window.Sons[n] && window.Sons[n](); } catch {} };
+  const succes = id => { try { window.Succes && window.Succes.debloquer(id); } catch {} };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+  const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
 
   /* ---------- Types de fichiers ---------- */
   const EXT = {
@@ -218,6 +288,8 @@
     audio: `<svg viewBox="0 0 64 64"><rect x="8" y="8" width="48" height="48" rx="8" fill="#26363c"/><path d="M27 41V20l18-4v21" fill="none" stroke="#e8b84a" stroke-width="4" stroke-linejoin="round"/><circle cx="22" cy="42" r="6" fill="#e8b84a"/><circle cx="40" cy="38" r="6" fill="#e8b84a"/></svg>`,
     lock: `<svg class="badge" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="2.5" fill="#e8b84a" stroke="#1b2428" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#1b2428" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.8" fill="#1b2428"/></svg>`,
     check: `<svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#3fae6a" stroke="#fff" stroke-width="1.5"/><path d="M6.5 12.5l3.8 3.8 7.2-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    corbeille: `<svg viewBox="0 0 64 64"><path d="M16 20h32l-3 34a4 4 0 0 1-4 4H23a4 4 0 0 1-4-4z" fill="#c9d3d8"/><path d="M16 20h32l-1 12H17z" fill="#dfe7ea"/><rect x="12" y="14" width="40" height="6" rx="3" fill="#9fb0b8"/><rect x="25" y="9" width="14" height="6" rx="2" fill="#9fb0b8"/><path d="M26 28v22M32 28v22M38 28v22" stroke="#8da0a8" stroke-width="3" stroke-linecap="round"/></svg>`,
+    succes: `<svg viewBox="0 0 64 64"><path d="M20 10h24v16a12 12 0 0 1-24 0z" fill="#ffd36a"/><path d="M20 14h-8v6a10 10 0 0 0 10 10M44 14h8v6a10 10 0 0 1-10 10" fill="none" stroke="#e0a92f" stroke-width="4"/><rect x="28" y="38" width="8" height="10" fill="#e0a92f"/><rect x="20" y="48" width="24" height="7" rx="2" fill="#c78f1d"/><path d="M26 16v10" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"/></svg>`,
     other: `<svg viewBox="0 0 64 64"><path d="M14 6h26l12 12v38a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#e3dfd2"/><path d="M40 6l12 12H42a2 2 0 0 1-2-2z" fill="#b9b3a0"/></svg>`
   };
 
@@ -285,7 +357,7 @@
     $('span', b).textContent = node.name;
     b.title = node.name;
     // les jeux (et tout, sur écran tactile) s'ouvrent en un seul clic ; le reste en double-clic
-    const simple = () => !!node.app || matchMedia('(pointer: coarse)').matches;
+    const simple = () => !!node.app || !!node.special || matchMedia('(pointer: coarse)').matches;
     b.addEventListener('click', () => {
       b.parentElement.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
@@ -313,7 +385,7 @@
     el.className = 'win';
     const W = Math.min((size && size.w) || 560, innerWidth - 24), H = Math.min((size && size.h) || 400, innerHeight - 80);
     el.style.width = W + 'px'; el.style.height = H + 'px';
-    el.style.left = Math.min(140 + offset, Math.max(8, innerWidth - W - 8)) + 'px';
+    el.style.left = Math.min((innerWidth > 900 ? 250 : 140) + offset, Math.max(8, innerWidth - W - 8)) + 'px';   // laisse les icônes visibles
     el.style.top = Math.min(40 + offset, Math.max(8, innerHeight - H - 60)) + 'px';
     offset = (offset + 28) % 140;
     el.innerHTML = `<div class="bar"><b></b><button class="m" aria-label="Réduire">–</button><button class="x" aria-label="Fermer">✕</button></div><div class="content" style="display:contents"></div>`;
@@ -352,6 +424,7 @@
 
     build(el, w);
     focusWin(w);
+    if (!(size && size.silencieux)) son('ding');
     return w;
   }
 
@@ -362,6 +435,13 @@
     if (node.type === 'video') return openMedia(node, 'video');
     if (node.type === 'audio') return openAudio(node);
     openText(node); // textes, et tentative en texte pour les autres fichiers
+  }
+
+  function suivi(pile) {
+    const racine = pile[0].name.toLowerCase();
+    if (racine.includes('corbeille')) succes('corbeille');
+    if (racine.includes('ouvre quand') && pile.length > 1) succes('ouvre');
+    if (lockNode && pile[0] === lockNode) { succes('nico'); const b = boutons.get(lockNode); if (b) b.classList.remove('pulse'); }
   }
 
   function openFolder(root) {
@@ -376,6 +456,7 @@
         where.textContent = stack.map(n => n.name).join(' / ');
         up.disabled = stack.length < 2;
         w.task.textContent = cur.name; $('b', el).textContent = cur.name;
+        suivi(stack);
         body.innerHTML = '<div class="note">Chargement…</div>';
         try {
           const list = sortNodes(await cur.children());
@@ -420,6 +501,7 @@
       const content = $('.content', el);
       content.innerHTML = '<div class="body"><div class="player">' + ICONS.audio + '<div class="t"></div></div></div>';
       $('.t', content).textContent = node.name.replace(/\.[^.]+$/, '');
+      succes('vocal');
       const a = document.createElement('audio');
       a.controls = true; a.autoplay = true;
       a.src = await node.url();
@@ -453,7 +535,11 @@
   const DOSSIER_VERROUILLE = 'nico';   // se débloque quand les trois jeux sont terminés
   const Jeux = window.Jeux || { apps: [], estTermine: () => false, tousTermines: () => false,
     reinitialiser() {}, toutTerminer() {}, ouvrir() {} };
-  if (location.search.includes('reset')) Jeux.reinitialiser();        // ex. bureau.html?reset
+  if (location.search.includes('reset')) {                            // ex. bureau.html?reset
+    Jeux.reinitialiser();
+    try { window.Succes && window.Succes.reinitialiser(); } catch {}
+    ['bureau-fete', 'bureau-fond', 'bureau-fond-perso'].forEach(lsDel);
+  }
   if (location.search.includes('debloquer')) Jeux.toutTerminer();     // ex. bureau.html?debloquer (pour tester)
 
   let lockNode = null;
@@ -465,14 +551,19 @@
       if (n.app) btn.classList.toggle('done', Jeux.estTermine(n.app));
       const l = estVerrouille(n);
       btn.classList.toggle('locked', l);
-      if (n === lockNode) btn.title = l ? n.name + ' (verrouillé)' : n.name;
+      if (n === lockNode) {
+        btn.title = l ? n.name + ' (verrouillé)' : n.name;
+        btn.classList.toggle('pulse', !l && !(window.Succes && window.Succes.estDebloque('nico')));
+      }
     });
   }
   Jeux.onChange = id => {
     majVerrous();
     const app = Jeux.apps.find(a => a.id === id);
-    if (lockNode && Jeux.tousTermines()) toast('Les trois jeux sont terminés : le dossier « ' + lockNode.name + ' » est déverrouillé !');
-    else toast('Jeu terminé : ' + (app ? app.nom : id) + ' ✓');
+    if (lockNode && Jeux.tousTermines()) {
+      toast('Les trois jeux sont terminés : le dossier « ' + lockNode.name + ' » est déverrouillé !');
+      setTimeout(() => lancerFete(), 2600);       // le temps de voir le résultat du dernier jeu
+    } else toast('Jeu terminé : ' + (app ? app.nom : id) + ' ✓');
   };
 
   let toastTimer;
@@ -487,12 +578,14 @@
       c.innerHTML = '<div class="msg"><p></p><button>OK</button></div>';
       $('p', c).textContent = texte;
       const ok = $('button', c); ok.onclick = () => $('.x', el).click(); ok.focus();
-    }, { w: 360, h: 190 });
+    }, { w: 360, h: 190, silencieux: true });
   }
 
   function ouvrirDepuisBureau(node) {
+    if (node.special === 'succes') { window.Succes && window.Succes.ouvrir({ openWindow }); return; }
     if (node.app) { Jeux.ouvrir(node.app, { openWindow }); return; }
     if (estVerrouille(node)) {
+      son('erreur');
       messageBox('Accès refusé', 'Ce dossier est verrouillé. Termine d’abord les trois jeux du bureau.');
       return;
     }
@@ -502,11 +595,15 @@
   function showDesktop(list, url) {
     sortNodes(list);
     lockNode = list.find(n => n.dir && n.name.toLowerCase() === DOSSIER_VERROUILLE) || null;
+    const corbeille = list.find(n => n.dir && n.name.toLowerCase() === 'corbeille') || null;
+    if (corbeille) corbeille.type = 'corbeille';
     const apps = Jeux.apps.map(a => ({
       name: a.nom, dir: false, type: 'app', icone: a.icone, app: a.id, children: async () => []
     }));
+    const noeudSucces = { name: 'Succès', dir: false, type: 'succes', special: 'succes', children: async () => [] };
+    const tout = [...list.filter(n => n !== corbeille), ...apps, noeudSucces, ...(corbeille ? [corbeille] : [])];
     boutons.clear();
-    desktop.replaceChildren(...[...list, ...apps].map(n => {
+    desktop.replaceChildren(...tout.map(n => {
       const b = makeIcon(n, ouvrirDepuisBureau);
       boutons.set(n, b);
       if (n === lockNode) $('.ico', b).insertAdjacentHTML('beforeend', ICONS.lock);
@@ -542,6 +639,147 @@
       'Dossier « bureau » introuvable');
   }
 
+  /* ---------- Fond d'écran (clic droit sur le bureau) ---------- */
+  const CLE_FOND = 'bureau-fond';
+  const DEGRADES = {
+    turquoise: ['Dégradé turquoise', ''],
+    nuit: ['Dégradé nuit', 'radial-gradient(ellipse at 20% 15%, #5b57b8 0%, transparent 55%), radial-gradient(ellipse at 85% 90%, #090a1d 0%, transparent 60%), linear-gradient(135deg, #15132f, #2d2b6e)'],
+    rose: ['Dégradé rose', 'radial-gradient(ellipse at 20% 15%, #ffc2d9 0%, transparent 55%), radial-gradient(ellipse at 85% 90%, #7a2a55 0%, transparent 60%), linear-gradient(135deg, #b34b7d, #e48bb0)']
+  };
+  let modeFond = lsGet(CLE_FOND) || 'auto';
+  let photoNous = null, imagePerso = lsGet(CLE_FOND + '-perso');
+
+  function trouverPhoto() {                 // cherche fonds/nous.jpg (ou .png, .webp)
+    return new Promise(resolve => {
+      const exts = ['jpg', 'jpeg', 'png', 'webp']; let i = 0;
+      const essai = () => {
+        if (i >= exts.length) return resolve(null);
+        const img = new Image(), u = 'fonds/nous.' + exts[i++];
+        img.onload = () => resolve(u); img.onerror = essai; img.src = u;
+      };
+      essai();
+    });
+  }
+  const calqueImage = u => 'linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.2)), url("' + u + '") center / cover no-repeat';
+  function appliquerFond() {
+    let css = '';
+    if (modeFond === 'perso' && imagePerso) css = calqueImage(imagePerso);
+    else if ((modeFond === 'photo' || modeFond === 'auto') && photoNous) css = calqueImage(photoNous);
+    else if (modeFond.startsWith('degrade:') && DEGRADES[modeFond.slice(8)]) css = DEGRADES[modeFond.slice(8)][1];
+    document.body.style.background = css;
+  }
+
+  const menuFond = $('#menu-fond');
+  function fermerMenu() { menuFond.hidden = true; }
+  function ouvrirMenuFond(x, y, ancre) {
+    const choix = [];
+    if (photoNous) choix.push(['photo', 'Notre photo']);
+    Object.entries(DEGRADES).forEach(([k, v]) => choix.push(['degrade:' + k, v[0]]));
+    choix.push(['perso', 'Choisir une image…']);
+    const actuel = modeFond === 'auto' ? (photoNous ? 'photo' : 'degrade:turquoise') : modeFond;
+    menuFond.innerHTML = '<div class="menu-titre">Fond d’écran</div>' + choix.map(([m, t]) =>
+      '<button type="button" role="menuitem" data-m="' + m + '"' + (m === actuel ? ' class="actif"' : '') + '>' + t + '</button>').join('');
+    menuFond.hidden = false;
+    const r = menuFond.getBoundingClientRect();
+    menuFond.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
+    menuFond.style.top = Math.max(8, ancre ? y - r.height - 8 : Math.min(y, innerHeight - r.height - 8)) + 'px';
+    menuFond.querySelector('button').focus();
+  }
+  menuFond.addEventListener('click', e => {
+    const b = e.target.closest('button[data-m]'); if (!b) return;
+    const m = b.dataset.m;
+    fermerMenu();
+    if (m === 'perso') { $('#fond-fichier').click(); return; }
+    modeFond = m; lsSet(CLE_FOND, m); appliquerFond(); succes('fond'); son('ding');
+  });
+  document.addEventListener('pointerdown', e => { if (!menuFond.hidden && !e.target.closest('#menu-fond')) fermerMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerMenu(); });
+  desktop.addEventListener('contextmenu', e => {
+    if (e.target !== desktop) return;
+    e.preventDefault(); ouvrirMenuFond(e.clientX, e.clientY);
+  });
+  $('#btn-fond').addEventListener('click', e => {
+    if (!menuFond.hidden) { fermerMenu(); return; }
+    const r = e.currentTarget.getBoundingClientRect();
+    ouvrirMenuFond(r.left - 160, r.top, true);
+  });
+  $('#fond-fichier').addEventListener('change', e => {      // image choisie sur l'appareil
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1920 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      imagePerso = c.toDataURL('image/jpeg', 0.82);
+      URL.revokeObjectURL(url);
+      try { localStorage.setItem(CLE_FOND + '-perso', imagePerso); } catch { toast('Image gardée seulement jusqu’à la fermeture de la page (trop lourde pour être mémorisée).'); }
+      modeFond = 'perso'; lsSet(CLE_FOND, modeFond); appliquerFond(); succes('fond'); son('ding');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Impossible de lire cette image.'); };
+    img.src = url;
+  });
+
+  /* ---------- Son ---------- */
+  const btnSon = $('#btn-son');
+  const majBtnSon = () => { const on = !window.Sons || window.Sons.actif; btnSon.textContent = on ? '🔊' : '🔇'; btnSon.setAttribute('aria-pressed', String(!on)); };
+  btnSon.addEventListener('click', () => { if (window.Sons) window.Sons.basculer(); majBtnSon(); });
+  majBtnSon();
+
+  /* ---------- Écran de fête (les trois jeux sont terminés) ---------- */
+  let rafConfettis = 0;
+  function confettis() {
+    cancelAnimationFrame(rafConfettis);
+    const c = $('#confetti'), g = c.getContext('2d');
+    c.width = innerWidth; c.height = innerHeight;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const couleurs = ['#ffd36a', '#ff9fc4', '#7fe3ff', '#c9a7ff', '#ffffff', '#6fd68f'];
+    const nv = p => { p.x = Math.random() * c.width; p.y = -10 - Math.random() * 60; p.vy = 2 + Math.random() * 3.5; };
+    const ps = Array.from({ length: 150 }, () => {
+      const p = { vx: (Math.random() - .5) * 2.4, r: 5 + Math.random() * 7, a: Math.random() * 6.28, va: (Math.random() - .5) * .3, col: couleurs[(Math.random() * couleurs.length) | 0] };
+      nv(p); p.y = Math.random() * -c.height * .8; return p;
+    });
+    const debut = performance.now();
+    (function boucle(t) {
+      g.clearRect(0, 0, c.width, c.height);
+      const encore = t - debut < 4500;
+      ps.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.a += p.va;
+        if (p.y > c.height + 20 && encore) nv(p);
+        g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = p.col; g.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); g.restore();
+      });
+      if (t - debut < 7500 && !$('#fete').hidden) rafConfettis = requestAnimationFrame(boucle);
+      else g.clearRect(0, 0, c.width, c.height);
+    })(debut);
+  }
+  function fermerFete() { $('#fete').hidden = true; cancelAnimationFrame(rafConfettis); }
+  function lancerFete(force) {
+    if (!force && lsGet('bureau-fete')) return;
+    lsSet('bureau-fete', '1');
+    const P = (window.PERSO && window.PERSO.fete) || {};
+    $('#fete-titre').textContent = P.titre || 'Tu as tout terminé !';
+    $('#fete-texte').textContent = P.texte || 'Un dossier vient de se déverrouiller.';
+    $('#fete-btn').textContent = P.bouton || 'Ouvrir le dossier';
+    $('#fete').hidden = false;
+    son('fanfare'); confettis();
+    $('#fete-btn').focus();
+  }
+  $('#fete-btn').addEventListener('click', () => { fermerFete(); if (lockNode && !estVerrouille(lockNode)) ouvrirDepuisBureau(lockNode); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#fete').hidden) fermerFete(); });
+
+  /* ---------- Bloc-notes caché (clic sur l'horloge) ---------- */
+  function ouvrirBlocNotes() {
+    const P = (window.PERSO && window.PERSO.secret) || { titre: 'secret.txt', texte: '…' };
+    succes('secret'); son('notif');
+    openWindow(P.titre + ' – Bloc-notes', el => {
+      $('.content', el).innerHTML = '<div class="bn"><div class="bn-menu"><span>Fichier</span><span>Édition</span><span>Format</span><span>Affichage</span></div><textarea class="bn-zone" readonly aria-label="Contenu du bloc-notes"></textarea></div>';
+      $('.bn-zone', el).value = P.texte;
+    }, { w: 440, h: 360, silencieux: true });
+  }
+  $('#clock').addEventListener('click', ouvrirBlocNotes);
+  $('#clock').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirBlocNotes(); } });
+
   /* ---------- Horloge ---------- */
   const tick = () => {
     const d = new Date();
@@ -550,6 +788,18 @@
   };
   tick(); setInterval(tick, 15000);
 
+  trouverPhoto().then(u => { photoNous = u; appliquerFond(); });
+  appliquerFond();
+
+  // jingle de démarrage (si le navigateur l'autorise, sinon au premier clic)
+  (async () => {
+    const joue = window.Sons ? await window.Sons.demarrage() : true;
+    if (!joue && window.Sons && window.Sons.actif) {
+      addEventListener('pointerdown', () => { if (performance.now() < 15000) window.Sons.demarrage(); }, { once: true });
+    }
+  })();
+
+  if (location.search.includes('fete')) setTimeout(() => lancerFete(true), 900);   // aperçu : bureau.html?fete
   start();
 })();
 </script>

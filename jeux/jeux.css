@@ -167,6 +167,33 @@
 .jeu .d-rang button:hover:not(:disabled) { background: #5865f2; }
 .jeu .d-rang button:disabled { opacity: .3; cursor: default; }
 
+/* ---------- Succès ---------- */
+#succes-toast {
+  position: fixed; top: 16px; right: 16px; z-index: 100001; display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, #232a3d, #151a29); color: #fff; padding: 12px 18px 12px 14px;
+  border-radius: 12px; border: 1px solid rgba(255,211,106,.65); box-shadow: 0 10px 34px rgba(0,0,0,.5), 0 0 24px rgba(255,211,106,.15);
+  font-family: "Segoe UI", system-ui, sans-serif; max-width: min(340px, 90vw);
+  transform: translateX(120%); opacity: 0; transition: transform .45s cubic-bezier(.2,1,.3,1), opacity .3s; pointer-events: none;
+}
+#succes-toast.show { transform: none; opacity: 1; }
+.st-icone { font-size: 30px; filter: drop-shadow(0 0 8px rgba(255,211,106,.6)); }
+.st-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #ffd36a; }
+.st-titre { font-size: 16px; font-weight: 700; }
+.jeu-succes { --fond: #1b2033; --fond2: #262e4a; --accent: #ffd36a; }
+.succ-top { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: rgba(0,0,0,.28); flex: none; }
+.succ-barre { height: 4px; background: rgba(255,255,255,.1); flex: none; }
+.succ-barre i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd36a, #ff9fc4); transition: width .5s; }
+.succ-liste { list-style: none; margin: 0; padding: 10px; flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 6px; align-content: start; }
+.succ-liste li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); opacity: .55; }
+.succ-liste li.ok { opacity: 1; background: rgba(255,211,106,.1); border: 1px solid rgba(255,211,106,.35); }
+.succ-ico { font-size: 22px; width: 30px; text-align: center; flex: none; }
+.succ-txt { display: grid; gap: 1px; min-width: 0; }
+.succ-txt b { font-size: 14px; }
+.succ-txt small { font-size: 12px; opacity: .75; }
+
+@media (prefers-reduced-motion: reduce) {
+  #succes-toast, .succ-barre i { transition: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .warp, .charge, .objectif, .resultat, .resume, .d-msg, .d-typing span { animation: none; }
 }

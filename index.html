@@ -132,6 +132,7 @@
   <button id="skip" type="button">Passer ›</button>
 </div>
 
+<script src="sons.js"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -231,11 +232,13 @@
       if (v === PASSWORD) {
         $('#msg').style.color = '#006000';
         $('#msg').textContent = 'Connexion en cours…';
+        try { Sons.ding(); } catch {}
         $('#pw').disabled = true; $('#form button').disabled = true;
         setTimeout(lancerIntro, 500);
       } else {
         $('#msg').style.color = '#a00000';
         $('#msg').textContent = 'Mot de passe incorrect. Réessaie.';
+        try { Sons.erreur(); } catch {}
         const w = $('#login');
         w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
         $('#pw').select();

@@ -90,6 +90,8 @@
   };
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const etoiles = n => '★'.repeat(n);
+  const S = id => { try { window.Succes && window.Succes.debloquer(id); } catch {} };     // succès
+  const son = n => { try { window.Sons && window.Sons[n] && window.Sons[n](); } catch {} }; // sons
   const pct = x => (Math.round(x * 10) / 10).toString().replace('.', ',') + ' %';
 
   let termines = store.lire(CLE_FINI, {});
@@ -106,12 +108,15 @@
     marquer(id) {
       if (termines[id]) return;
       termines[id] = true; store.ecrire(CLE_FINI, termines);
+      S(id);
+      if (API.tousTermines()) S('tout');
       if (API.onChange) API.onChange(id);
     },
     toutTerminer() { IDS.forEach(id => { termines[id] = true; }); store.ecrire(CLE_FINI, termines); },
     reinitialiser() {
       termines = {}; store.effacer(CLE_FINI);
       IDS.forEach(id => store.effacer(CLES_GACHA(id)));
+      store.effacer('bureau-quiz-discord');
     },
     ouvrir(id, ctx) {
       if (id === 'genshin') return ouvrirGacha(GENSHIN, ctx);
@@ -488,11 +493,14 @@
         const perdu5050 = !gagne && etat.garanti && liste.includes(perdant);
         animer(meilleur, () => {
           if (nb === 1) voirResultat(liste[0]); else voirResume(liste);
+          S('souhait'); if (nb >= 10) S('dix');
+          if (liste.some(r => r.etoiles === 5)) { S('cinq'); son('etoile'); }
+          if (perdu5050) S('perdu');
           if (gagne) {
             const premiere = !API.estTermine(cfg.id);
             API.marquer(cfg.id);
             majStats();
-            if (premiere) banniere('✓ Objectif atteint : ' + grand.nom + ' !');
+            if (premiere) { banniere('✓ Objectif atteint : ' + grand.nom + ' !'); son('fanfare'); }
           } else if (perdu5050) {
             banniere('50/50 perdu… le prochain 5★ sera ' + grand.nom + ' !');
           }
