@@ -129,8 +129,8 @@
      type 'classement' → liste à réordonner (items) */
   const QUIZ_DISCORD = {
     joueuse: 'Mia', serveur: 'Serveur de Koki', salon: 'quiz',
-    // À la fin du quiz, les réponses sont envoyées par mail (via le service gratuit FormSubmit)
-    envoi: { email: 'nicod1620005@gmail.com', nom: 'Nico', sujet: 'Quiz Discord — réponses de Mia' },
+    // À la fin du quiz, les réponses sont envoyées via Netlify Forms (formulaire caché dans bureau.html)
+    envoi: { formulaire: 'quiz-discord', nom: 'Nico' },
     questions: [
       { id: 'flop', type: 'choix',
         texte: 'Qui fait le plus de FLOP sur le serveur de Koki ?',
@@ -264,64 +264,30 @@
         return Array.isArray(v) ? v.map((n, j) => (j + 1) + ') ' + n).join('  ') : v;
       }
 
-      // Méthode 1 : envoi « AJAX » (on peut lire la réponse de FormSubmit)
-      async function postFetch(corps) {
-        let rep;
-        try {
-          rep = await fetch('https://formsubmit.co/ajax/' + cfg.envoi.email, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(corps)
-          });
-        } catch (e) { const err = new Error('reseau'); err.reseau = true; throw err; }
-        const data = await rep.json().catch(() => ({}));
-        if (!rep.ok || data.success === 'false' || data.success === false) {
-          throw new Error(data.message || ('erreur ' + rep.status));
-        }
-      }
-      // Méthode 2 (secours) : formulaire classique envoyé dans un cadre caché, sans blocage de sécurité
-      function postFormulaire(corps) {
-        return new Promise(resolve => {
-          const nom = 'envoi-' + Date.now();
-          const cadre = document.createElement('iframe'); cadre.name = nom; cadre.hidden = true;
-          const f = document.createElement('form');
-          f.method = 'POST'; f.action = 'https://formsubmit.co/' + cfg.envoi.email; f.target = nom; f.acceptCharset = 'UTF-8'; f.hidden = true;
-          Object.entries(corps).forEach(([k, v]) => {
-            const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i);
-          });
-          document.body.append(cadre, f);
-          const fini = () => { setTimeout(() => { cadre.remove(); f.remove(); }, 500); resolve(); };
-          cadre.addEventListener('load', fini, { once: true });
-          setTimeout(fini, 10000);
-          f.submit();
-        });
-      }
-
+      // Envoi des réponses avec Netlify Forms (le formulaire caché est dans bureau.html)
       async function envoyer() {
         const info = saisie.querySelector('.d-info');
         const dire = t => { if (info) info.textContent = t; };
-        const boutonRessai = () => {
-          if (!saisie.querySelector('[data-a="envoyer"]'))
-            saisie.insertAdjacentHTML('afterbegin', '<button type="button" class="d-btn" data-a="envoyer">Réessayer l’envoi</button>');
-        };
         dire('Envoi de tes réponses à ' + cfg.envoi.nom + '…');
-        const corps = { _subject: cfg.envoi.sujet, _template: 'table', _captcha: 'false', Joueuse: cfg.joueuse };
-        Q.forEach((q, k) => { corps['Q' + (k + 1) + ' – ' + q.texte] = ligneReponse(q); });
+        const donnees = { 'form-name': cfg.envoi.formulaire, joueuse: cfg.joueuse, reponses: texteReponses() };
+        Q.forEach((q, k) => { donnees['q' + (k + 1)] = ligneReponse(q); });
         try {
-          await postFetch(corps);
+          const rep = await fetch('/', {
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(donnees).toString()
+          });
+          if (!rep.ok) throw new Error('HTTP ' + rep.status);
           etat.envoye = true; sauver();
           saisie.querySelector('[data-a="envoyer"]')?.remove();
           dire('');
           if (!annule) msg('bot', 'Tes réponses ont été envoyées à ' + esc(cfg.envoi.nom) + ' 💌');
         } catch (e) {
-          console.warn('Envoi FormSubmit :', e.message);
-          if (e.reseau) {                      // la méthode 1 est bloquée : on tente la méthode de secours
-            await postFormulaire(corps);
-            etat.envoye = true; sauver();
-            dire('Envoi effectué, mais la réception n’a pas pu être confirmée.');
-            boutonRessai();
-          } else {
-            dire('FormSubmit a répondu : « ' + e.message + ' ». Réessaie, ou copie tes réponses.');
-            boutonRessai();
-          }
+          console.warn('Envoi Netlify Forms :', e.message);
+          dire(/^HTTP/.test(e.message)
+            ? 'Le site n’a pas accepté l’envoi (' + e.message + '). Il ne marche que sur le site en ligne. Tu peux copier tes réponses.'
+            : 'Pas de connexion pour envoyer. Réessaie, ou copie tes réponses.');
+          if (!saisie.querySelector('[data-a="envoyer"]'))
+            saisie.insertAdjacentHTML('afterbegin', '<button type="button" class="d-btn" data-a="envoyer">Réessayer l’envoi</button>');
         }
       }
 
