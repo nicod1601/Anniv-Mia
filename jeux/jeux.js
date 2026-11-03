@@ -1,5 +1,5 @@
 /* Mini-jeux du bureau
-   - Discord        : quiz (à venir)
+   - Discord        : quiz façon salon de discussion
    - Genshin Impact : jeu de tirages
    - Honkai: Star Rail : jeu de tirages (même moteur)
    Un jeu est « terminé » quand le grand prix est obtenu. Quand les trois sont terminés,
@@ -122,14 +122,171 @@
   API._test = { tirerRecompense, GENSHIN, HSR };   // utilisé seulement pour vérifier les taux
   window.Jeux = API;
 
-  /* ---------- Discord : à venir ---------- */
+  /* ---------- Discord : le quiz ---------- */
+  /* Questions du quiz (modifie / ajoute les tiennes ici) :
+     type 'choix'      → boutons ; 'bonne' = bonne réponse (facultatif), 'ok' / 'ko' = réaction du bot
+     type 'texte'      → réponse libre
+     type 'classement' → liste à réordonner (items) */
+  const QUIZ_DISCORD = {
+    joueuse: 'Mia', serveur: 'Serveur de Koki', salon: 'quiz',
+    questions: [
+      { id: 'flop', type: 'choix',
+        texte: 'Qui fait le plus de FLOP sur le serveur de Koki ?',
+        options: ['Mia', 'Nico', 'Navi', 'Shadow', 'Ronni', 'Autre'], bonne: 'Shadow',
+        ok: 'Exact ! Shadow et ses flops légendaires.', ko: 'Raté ! La bonne réponse était Shadow.' },
+      { id: 'modo', type: 'texte',
+        texte: 'Qui est, pour toi, le meilleur modo du serveur de Koki ?' },
+      { id: 'proche', type: 'texte',
+        texte: 'Entre tous tes amis Discord, quelle est la personne qui compte le plus pour toi ?' },
+      { id: 'classement', type: 'classement',
+        texte: 'Classe ces personnes : qui est supérieur, qui est inférieur ?',
+        aide: '1er = le plus supérieur, dernier = le plus inférieur. Utilise ▲ et ▼.',
+        items: ['Shadow', 'Navi', 'Koki', 'Nico', 'Ronni', 'Eski'] },
+      { id: 'fight', type: 'texte',
+        texte: 'Avec qui as-tu le plus envie de fight ?' }
+    ]
+  };
+
   function ouvrirDiscord(ctx) {
-    ctx.openWindow('Discord', el => {
+    const cfg = QUIZ_DISCORD, Q = cfg.questions, CLE = 'bureau-quiz-discord';
+    let etat = Object.assign({ rep: {} }, store.lire(CLE, {}));
+    const sauver = () => store.ecrire(CLE, etat);
+
+    ctx.openWindow('Discord', (el, w) => {
       el.querySelector('.content').innerHTML =
-        '<div class="jeu jeu-attente" style="--fond:#1e2040;--fond2:#2e3163;--accent:#8b95ff;--encre:#10123a">' +
-        '<img src="jeux/icones/discord.png" alt="" width="72" height="72">' +
-        '<h2>Quiz Discord</h2><p>Ce jeu arrive bientôt…</p></div>';
-    }, { w: 420, h: 280 });
+        `<div class="jeu jeu-discord">
+           <div class="d-top"><span class="d-hash">#</span><b>${esc(cfg.salon)}</b><span class="d-serveur">${esc(cfg.serveur)}</span>
+             <span class="sp"></span><span class="chip" data-r="prog"></span></div>
+           <div class="d-log" role="log" aria-live="polite" data-r="log"></div>
+           <div class="d-saisie" data-r="saisie"></div>
+         </div>`;
+      const $r = n => el.querySelector(`[data-r="${n}"]`);
+      const log = $r('log'), saisie = $r('saisie');
+      let annule = false;
+      w.cleanup = () => { annule = true; };
+      const pause = ms => new Promise(r => setTimeout(r, ms));
+      const heure = () => 'Aujourd’hui à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const descendre = () => { log.scrollTop = log.scrollHeight; };
+
+      function msg(qui, html) {
+        const bot = qui === 'bot';
+        const d = document.createElement('div');
+        d.className = 'd-msg';
+        d.innerHTML =
+          `<div class="d-av ${bot ? 'bot' : 'moi'}">${bot ? '<img src="jeux/icones/discord.png" alt="">' : esc(cfg.joueuse[0])}</div>
+           <div class="d-corps"><div class="d-nom"><span class="${bot ? 'bot' : 'moi'}">${bot ? 'Quiz Bot' : esc(cfg.joueuse)}</span>${bot ? '<i class="d-tag">BOT</i>' : ''}<time>${heure()}</time></div>
+           <div class="d-txt">${html}</div></div>`;
+        log.appendChild(d); descendre();
+        return d;
+      }
+      async function ecrire(ms) {         // « Quiz Bot est en train d'écrire… »
+        const t = document.createElement('div');
+        t.className = 'd-typing'; t.innerHTML = 'Quiz Bot est en train d’écrire<span>.</span><span>.</span><span>.</span>';
+        log.appendChild(t); descendre();
+        await pause(ms); t.remove();
+      }
+      const majProg = i => { $r('prog').textContent = i >= Q.length ? 'Terminé ✓' : 'Question ' + (i + 1) + ' / ' + Q.length; };
+
+      const rendu = (q, v) => q.type === 'classement'
+        ? '<ol>' + v.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol>' : esc(v);
+
+      async function repondre(i, valeur) {
+        const q = Q[i];
+        etat.rep[q.id] = valeur; sauver();
+        saisie.innerHTML = '';
+        msg('moi', rendu(q, valeur));
+        if (q.type === 'choix' && q.bonne) {
+          await ecrire(550); if (annule) return;
+          msg('bot', esc(valeur === q.bonne ? q.ok : q.ko));
+        }
+        poser(i + 1);
+      }
+
+      function classement(i, q, carteDans) {
+        let ordre = [...q.items];
+        const carte = document.createElement('div');
+        carte.className = 'd-carte';
+        function dessiner(focus) {
+          carte.innerHTML =
+            `<p class="d-aide">${esc(q.aide || '')}</p><ol class="d-rang">` +
+            ordre.map((n, k) => `<li><span class="d-pos">${k + 1}</span><span class="d-nr">${esc(n)}</span>
+               <button type="button" data-k="${k}" data-d="-1" aria-label="Monter ${esc(n)}"${k === 0 ? ' disabled' : ''}>▲</button>
+               <button type="button" data-k="${k}" data-d="1" aria-label="Descendre ${esc(n)}"${k === ordre.length - 1 ? ' disabled' : ''}>▼</button></li>`).join('') +
+            '</ol><button type="button" class="d-btn" data-ok>Valider mon classement</button>';
+          if (focus) {
+            const b = carte.querySelector(`[data-k="${focus.k}"][data-d="${focus.d}"]:not([disabled])`) ||
+                      carte.querySelector(`[data-k="${focus.k}"]:not([disabled])`);
+            if (b) b.focus();
+          }
+        }
+        carte.addEventListener('click', e => {
+          const b = e.target.closest('button'); if (!b) return;
+          if ('ok' in b.dataset) { carte.remove(); repondre(i, ordre); return; }
+          const k = +b.dataset.k, d = +b.dataset.d, k2 = k + d;
+          if (k2 < 0 || k2 >= ordre.length) return;
+          [ordre[k], ordre[k2]] = [ordre[k2], ordre[k]];
+          dessiner({ k: k2, d });
+        });
+        dessiner();
+        carteDans.querySelector('.d-corps').appendChild(carte);
+        descendre();
+      }
+
+      async function poser(i) {
+        if (annule) return;
+        majProg(i);
+        if (i >= Q.length) return fin();
+        const q = Q[i];
+        await ecrire(500 + Math.random() * 400); if (annule) return;
+        const m = msg('bot', esc(q.texte));
+        saisie.innerHTML = '';
+        if (q.type === 'choix') {
+          saisie.innerHTML = q.options.map(o => `<button type="button" class="d-btn" data-o="${esc(o)}">${esc(o)}</button>`).join('');
+          saisie.onclick = e => { const b = e.target.closest('[data-o]'); if (b) { saisie.onclick = null; repondre(i, b.dataset.o); } };
+        } else if (q.type === 'texte') {
+          saisie.innerHTML = `<form class="d-form"><input type="text" maxlength="300" autocomplete="off" placeholder="Envoyer un message dans #${esc(cfg.salon)}" aria-label="Ta réponse"><button class="d-envoi" type="submit" aria-label="Envoyer">➤</button></form>`;
+          const f = saisie.querySelector('form'), inp = f.querySelector('input');
+          inp.focus();
+          f.onsubmit = e => { e.preventDefault(); const v = inp.value.trim(); if (v) { f.onsubmit = null; repondre(i, v); } };
+        } else classement(i, q, m);
+      }
+
+      function texteReponses() {
+        return 'Quiz Discord — réponses de ' + cfg.joueuse + '\n\n' + Q.map((q, k) => {
+          const v = etat.rep[q.id];
+          return (k + 1) + '. ' + q.texte + '\n   → ' + (Array.isArray(v) ? v.map((n, j) => (j + 1) + ') ' + n).join('  ') : v);
+        }).join('\n');
+      }
+
+      async function fin() {
+        await ecrire(600); if (annule) return;
+        msg('bot', 'Le quiz est terminé, merci d’avoir joué ! 💙');
+        API.marquer('discord');
+        saisie.innerHTML = '<button type="button" class="d-btn" data-a="copier">Copier mes réponses</button>' +
+                           '<button type="button" class="d-btn sec" data-a="refaire">Refaire le quiz</button><span class="d-info" aria-live="polite"></span>';
+        saisie.onclick = async e => {
+          const b = e.target.closest('[data-a]'); if (!b) return;
+          if (b.dataset.a === 'refaire') { etat.rep = {}; sauver(); log.innerHTML = ''; saisie.onclick = null; poser(0); return; }
+          const info = saisie.querySelector('.d-info');
+          try { await navigator.clipboard.writeText(texteReponses()); info.textContent = 'Copié ! Tu peux le coller dans un message.'; }
+          catch {
+            const t = document.createElement('textarea'); t.value = texteReponses(); document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); info.textContent = 'Copié ! Tu peux le coller dans un message.'; } catch { info.textContent = 'Impossible de copier.'; }
+            t.remove();
+          }
+        };
+      }
+
+      // reprise : on réaffiche ce qui a déjà été répondu, puis on continue
+      let reprise = 0;
+      while (reprise < Q.length && Q[reprise].id in etat.rep) {
+        const q = Q[reprise], v = etat.rep[q.id];
+        msg('bot', esc(q.texte)); msg('moi', rendu(q, v));
+        if (q.type === 'choix' && q.bonne) msg('bot', esc(v === q.bonne ? q.ok : q.ko));
+        reprise++;
+      }
+      poser(reprise);
+    }, { w: 600, h: 650 });
   }
 
   /* ---------- Jeux de tirages ---------- */
