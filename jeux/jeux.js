@@ -129,6 +129,8 @@
      type 'classement' → liste à réordonner (items) */
   const QUIZ_DISCORD = {
     joueuse: 'Mia', serveur: 'Serveur de Koki', salon: 'quiz',
+    // À la fin du quiz, les réponses sont envoyées par mail (via le service gratuit FormSubmit)
+    envoi: { email: 'nicod1620005@gmail.com', nom: 'Nico', sujet: 'Quiz Discord — réponses de Mia' },
     questions: [
       { id: 'flop', type: 'choix',
         texte: 'Qui fait le plus de FLOP sur le serveur de Koki ?',
@@ -253,20 +255,49 @@
 
       function texteReponses() {
         return 'Quiz Discord — réponses de ' + cfg.joueuse + '\n\n' + Q.map((q, k) => {
-          const v = etat.rep[q.id];
-          return (k + 1) + '. ' + q.texte + '\n   → ' + (Array.isArray(v) ? v.map((n, j) => (j + 1) + ') ' + n).join('  ') : v);
+          return (k + 1) + '. ' + q.texte + '\n   → ' + ligneReponse(q);
         }).join('\n');
+      }
+
+      function ligneReponse(q) {
+        const v = etat.rep[q.id];
+        return Array.isArray(v) ? v.map((n, j) => (j + 1) + ') ' + n).join('  ') : v;
+      }
+
+      async function envoyer() {
+        const info = saisie.querySelector('.d-info');
+        const dire = t => { if (info) info.textContent = t; };
+        dire('Envoi de tes réponses à ' + cfg.envoi.nom + '…');
+        try {
+          const corps = { _subject: cfg.envoi.sujet, _template: 'table', _captcha: 'false', Joueuse: cfg.joueuse };
+          Q.forEach((q, k) => { corps['Q' + (k + 1) + ' – ' + q.texte] = ligneReponse(q); });
+          const rep = await fetch('https://formsubmit.co/ajax/' + cfg.envoi.email, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(corps)
+          });
+          const data = await rep.json().catch(() => ({}));
+          if (!rep.ok || data.success === 'false' || data.success === false) throw new Error('envoi refusé');
+          etat.envoye = true; sauver();
+          saisie.querySelector('[data-a="envoyer"]')?.remove();
+          dire('');
+          if (!annule) msg('bot', 'Tes réponses ont été envoyées à ' + esc(cfg.envoi.nom) + ' 💌');
+        } catch {
+          dire('L’envoi n’a pas marché. Réessaie, ou copie tes réponses pour les envoyer toi-même.');
+          if (!saisie.querySelector('[data-a="envoyer"]'))
+            saisie.insertAdjacentHTML('afterbegin', '<button type="button" class="d-btn" data-a="envoyer">Réessayer l’envoi</button>');
+        }
       }
 
       async function fin() {
         await ecrire(600); if (annule) return;
         msg('bot', 'Le quiz est terminé, merci d’avoir joué ! 💙');
         API.marquer('discord');
-        saisie.innerHTML = '<button type="button" class="d-btn" data-a="copier">Copier mes réponses</button>' +
+        saisie.innerHTML = '<button type="button" class="d-btn sec" data-a="copier">Copier mes réponses</button>' +
                            '<button type="button" class="d-btn sec" data-a="refaire">Refaire le quiz</button><span class="d-info" aria-live="polite"></span>';
         saisie.onclick = async e => {
           const b = e.target.closest('[data-a]'); if (!b) return;
-          if (b.dataset.a === 'refaire') { etat.rep = {}; sauver(); log.innerHTML = ''; saisie.onclick = null; poser(0); return; }
+          const a = b.dataset.a;
+          if (a === 'refaire') { etat.rep = {}; etat.envoye = false; sauver(); log.innerHTML = ''; saisie.onclick = null; poser(0); return; }
+          if (a === 'envoyer') { envoyer(); return; }
           const info = saisie.querySelector('.d-info');
           try { await navigator.clipboard.writeText(texteReponses()); info.textContent = 'Copié ! Tu peux le coller dans un message.'; }
           catch {
@@ -275,6 +306,7 @@
             t.remove();
           }
         };
+        if (!etat.envoye) envoyer();
       }
 
       // reprise : on réaffiche ce qui a déjà été répondu, puis on continue
