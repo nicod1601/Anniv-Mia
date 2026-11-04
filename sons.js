@@ -57,6 +57,13 @@
         [1046.5, 1318.5, 1568].forEach((f, i) => ton(f, 0.75 + i * 0.09, 0.9, { vol: 0.04 }));
       });
     },
+    // arrêt de l'ordinateur : notes qui descendent
+    arret() {
+      jouer(() => {
+        [[784, 0], [659.25, 0.28], [523.25, 0.56], [392, 0.84]].forEach(([f, t]) => ton(f, t, 0.7, { vol: 0.08 }));
+        [196, 261.63, 329.63].forEach(f => ton(f, 0.84, 1.6, { type: 'triangle', vol: 0.05, attaque: 0.1 }));
+      });
+    },
     // jingle de démarrage ; renvoie true s'il a pu être joué
     async demarrage() {
       if (!(await pret())) return false;

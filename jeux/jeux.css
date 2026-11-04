@@ -191,8 +191,67 @@
 .succ-txt b { font-size: 14px; }
 .succ-txt small { font-size: 12px; opacity: .75; }
 
+/* ---------- Messenger ---------- */
+.msn { --fond: #eef2f7; background: #eef2f7; color: #1b2430; }
+.msn-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; background: #fff; border-bottom: 1px solid #dde3ea; }
+.msn-top b { display: block; font-size: 15px; }
+.msn-top small { color: #3a9d5d; font-size: 12px; }
+.msn-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: linear-gradient(135deg, #2f8cff, #7b5cff); }
+.msn-fil { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 6px; user-select: text; }
+.msn-ligne { display: flex; animation: fondu .25s ease-out; }
+.msn-ligne.moi { justify-content: flex-end; }
+.msn-bulle { max-width: 78%; padding: 9px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-break: break-word; }
+.lui .msn-bulle { background: #fff; border: 1px solid #dde3ea; border-bottom-left-radius: 5px; }
+.moi .msn-bulle { background: #2f8cff; color: #fff; border-bottom-right-radius: 5px; }
+.msn-bulle.nouveau { background: linear-gradient(135deg, #fff8e2, #ffeeb8); border: 1px solid #f0c75a; color: #3a2b05; box-shadow: 0 0 18px rgba(240,199,90,.35); }
+.msn-bulle.ecrit { display: flex; gap: 4px; padding: 13px 16px; }
+.msn-bulle.ecrit i { width: 7px; height: 7px; border-radius: 50%; background: #9aa6b6; animation: pulse 1s infinite; }
+.msn-bulle.ecrit i:nth-child(2) { animation-delay: .2s; }
+.msn-bulle.ecrit i:nth-child(3) { animation-delay: .4s; }
+.msn-sep { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; color: #b58a14; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.msn-sep::before, .msn-sep::after { content: ""; flex: 1; height: 1px; background: #f0c75a; }
+.msn-bas { display: flex; align-items: center; gap: 10px; padding: 10px 14px; flex: none; background: #fff; border-top: 1px solid #dde3ea; }
+.msn-intro { font-size: 12px; color: #7a8696; }
+.jeu .msn-btn { background: #2f8cff; color: #fff; border: 0; padding: 8px 18px; font-size: 13px; }
+.jeu .msn-btn:hover { background: #1f78e8; }
+
+/* ---------- Qui a dit ça ? ---------- */
+.q-citation { margin: 8px 0 0; padding: 8px 12px; border-left: 4px solid #5865f2; background: rgba(255,255,255,.05); border-radius: 0 6px 6px 0; font-style: italic; }
+
+/* ---------- Lecteur de musique ---------- */
+.wa { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; color: #cfe9d0;
+  background: linear-gradient(180deg, #4a505c, #2c3038); font-family: "Cascadia Mono", Consolas, monospace; user-select: none; }
+.wa-ecran { display: flex; gap: 10px; padding: 8px; background: #050a06; border: 2px solid #1a1f1b; border-radius: 4px; box-shadow: inset 0 0 14px rgba(0,0,0,.8); }
+.wa-vis { width: 96px; height: 52px; display: flex; align-items: flex-end; gap: 2px; flex: none; }
+.wa-vis i { flex: 1; height: 6%; background: linear-gradient(#e8f77b, #46e05c); transition: height .13s; }
+.wa-infos { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.wa-titre { overflow: hidden; white-space: nowrap; color: #7dff7d; font-size: 14px; }
+.wa-titre span { display: inline-block; padding-left: 100%; animation: defile 14s linear infinite; }
+@keyframes defile { to { transform: translateX(-100%); } }
+.wa-temps { color: #7dff7d; font-size: 18px; letter-spacing: 1px; text-align: right; }
+.wa-seek, .wa-vol input { accent-color: #46e05c; }
+.wa-seek { width: 100%; }
+.wa-ctrl { display: flex; align-items: center; gap: 6px; }
+.wa-ctrl button { font: inherit; font-size: 15px; width: 40px; height: 30px; cursor: pointer; color: #e6e9ef; background: linear-gradient(#6c7482, #454b57); border: 1px solid #1f232b; border-radius: 4px; }
+.wa-ctrl button:hover { filter: brightness(1.2); }
+.wa-ctrl button:focus-visible { outline: 2px solid #7dff7d; }
+.wa-vol { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.wa-vol input { width: 80px; }
+.wa-note { min-height: 40px; padding: 8px 10px; font-size: 13px; line-height: 1.45; color: #ffe9a8; background: rgba(0,0,0,.35); border-radius: 4px; font-family: "Segoe UI", system-ui, sans-serif; font-style: italic; }
+.wa-liste { list-style: none; margin: 0; padding: 4px; flex: 1; min-height: 0; overflow-y: auto; background: #050a06; border: 2px solid #1a1f1b; border-radius: 4px; }
+.wa-liste li { display: flex; gap: 8px; padding: 5px 8px; font-size: 13px; color: #46e05c; cursor: pointer; }
+.wa-liste li:hover { background: #0d1a10; }
+.wa-liste li.on { background: #123018; color: #e8f77b; }
+.wa-n { opacity: .7; }
+
+/* ---------- Pluie d'emojis (codes secrets) ---------- */
+#pluie { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 99998; }
+#pluie span { position: absolute; top: -8vh; animation: chute linear forwards; }
+@keyframes chute { to { transform: translateY(115vh) rotate(360deg); } }
+
 @media (prefers-reduced-motion: reduce) {
   #succes-toast, .succ-barre i { transition: none; }
+  #pluie span, .wa-titre span, .msn-ligne { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .warp, .charge, .objectif, .resultat, .resume, .d-msg, .d-typing span { animation: none; }

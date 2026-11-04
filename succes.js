@@ -16,8 +16,19 @@
     { id: 'vocal',     titre: 'À l’écoute',             desc: 'Écouter un enregistrement audio.' },
     { id: 'fond',      titre: 'Décoratrice',            desc: 'Changer le fond d’écran.' },
     { id: 'secret',    titre: 'Curieuse',               desc: 'Trouver le bloc-notes caché.', secret: true },
-    { id: 'nico',      titre: 'Le dernier dossier',     desc: 'Ouvrir le dossier qui était verrouillé.' }
+    { id: 'nico',      titre: 'Le dernier dossier',     desc: 'Ouvrir le dossier qui était verrouillé.' },
+    { id: 'impossible', titre: 'Rien ne se perd',       desc: 'Essayer de vider la corbeille.' },
+    { id: 'fin',       titre: 'Bonne nuit',             desc: 'Arrêter l’ordinateur.' },
+    { id: 'messenger', titre: 'Lectrice assidue',       desc: 'Lire la conversation jusqu’au bout.', si: () => ok('messenger') },
+    { id: 'qui',       titre: 'Mémoire de serveur',     desc: 'Terminer « Qui a dit ça ? ».', si: () => ok('qui') },
+    { id: 'parfait',   titre: 'Sans faute',             desc: 'Réussir « Qui a dit ça ? » à 100 %.', si: () => ok('qui') },
+    { id: 'musique',   titre: 'Mélomane',               desc: 'Écouter une chanson dans le lecteur.', si: () => ok('musique') },
+    { id: 'konami',    titre: 'Code secret',            desc: 'Un vieux code de jeu vidéo…', secret: true },
+    { id: 'flop',      titre: 'Flop détecté',           desc: 'Prononcer le mot qui fâche.', secret: true },
+    { id: 'mia',       titre: 'Un petit coucou',        desc: 'Taper un certain prénom.', secret: true }
   ];
+  const ok = id => !!(window.Apps && window.Apps.visible(id));
+  const visibles = () => LISTE.filter(a => !a.si || a.si());
 
   let faits = {};
   try { faits = JSON.parse(localStorage.getItem(CLE) || '{}'); } catch {}
@@ -63,10 +74,11 @@
            </div>`;
         const $r = n => el.querySelector(`[data-r="${n}"]`);
         const dessiner = () => {
-          const n = LISTE.filter(a => faits[a.id]).length;
-          $r('n').textContent = n + ' / ' + LISTE.length;
-          $r('barre').style.width = (n / LISTE.length * 100) + '%';
-          $r('liste').innerHTML = LISTE.map(a => {
+          const vis = visibles();
+          const n = vis.filter(a => faits[a.id]).length;
+          $r('n').textContent = n + ' / ' + vis.length;
+          $r('barre').style.width = (n / vis.length * 100) + '%';
+          $r('liste').innerHTML = vis.map(a => {
             const ok = !!faits[a.id];
             const titre = ok || !a.secret ? a.titre : '???';
             const desc = ok || !a.secret ? a.desc : 'Un succès secret…';

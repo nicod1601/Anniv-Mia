@@ -74,6 +74,13 @@
   }
   button:active { border-color: var(--dark) var(--light) var(--light) var(--dark); box-shadow: inset 1px 1px 0 var(--shadow); }
   button:focus-visible { outline: 1px dotted #000; outline-offset: -5px; }
+  .petit { font-size: 12px; color: #444; margin: 10px 0 0 !important; }
+  .compte {
+    margin: 4px 0 12px; padding: 14px 10px; text-align: center; font-size: 26px; letter-spacing: 2px; font-weight: bold;
+    background: #050a06; color: #7dff7d; border: 2px solid; border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+    text-shadow: 0 0 8px rgba(125,255,125,.6);
+  }
+  #attente { display: none; }
   .shake { animation: shake .35s; }
   @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
   /* ---------- Vidéo d'intro ---------- */
@@ -108,6 +115,15 @@
     </div>
   </section>
 
+  <section class="win" id="attente" aria-label="Pas encore">
+    <div class="title" id="attente-titre">Pas encore…</div>
+    <div class="inner">
+      <p id="attente-texte"></p>
+      <div class="compte" id="compte" role="timer">--</div>
+      <p class="petit">La session s’ouvrira toute seule à l’heure indiquée.</p>
+    </div>
+  </section>
+
   <section class="win" id="login" aria-label="Connexion">
     <div class="title">Ouvrir une session</div>
     <div class="inner">
@@ -116,6 +132,7 @@
         <label for="pw">Mot de passe :</label>
         <input id="pw" type="password" spellcheck="false" autocapitalize="characters" autocomplete="off">
         <p class="hint"><b>Indice :</b> tape la date de naissance, puis la première lettre du prénom et du nom à la fin.</p>
+        <p class="petit">Nico sera prévenu par mail quand tu entreras.</p>
         <p id="msg" role="alert"></p>
         <div class="row"><button type="submit">OK</button></div>
       </form>
@@ -132,6 +149,13 @@
   <button id="skip" type="button">Passer ›</button>
 </div>
 
+<!-- Formulaire invisible : Netlify le détecte et envoie un mail quand elle entre -->
+<form name="visite" method="POST" data-netlify="true" hidden>
+  <input type="hidden" name="form-name" value="visite">
+  <input name="message"><input name="quand">
+</form>
+
+<script src="perso.js"></script>
 <script src="sons.js"></script>
 <script>
 (() => {
@@ -221,6 +245,45 @@
     });
   }
 
+  /* ---------- 2b. Compte à rebours (si une date d'ouverture est réglée dans perso.js) ---------- */
+  function attendreDate() {
+    const A = (window.PERSO && window.PERSO.anniversaire) || {};
+    const d = A.ouverture ? new Date(A.ouverture) : null;
+    if (!d || isNaN(d) || Date.now() >= d.getTime()) return Promise.resolve();
+    return new Promise(resolve => {
+      $('#loading').style.display = 'none';
+      $('#attente').style.display = 'block';
+      $('#attente-titre').textContent = A.titre || 'Pas encore…';
+      $('#attente-texte').textContent = A.texte || '';
+      const deux = n => String(n).padStart(2, '0');
+      const maj = () => {
+        const ms = d.getTime() - Date.now();
+        if (ms <= 0) { clearInterval(t); $('#attente').style.display = 'none'; resolve(); return; }
+        const j = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+        $('#compte').textContent = (j > 0 ? j + ' j  ' : '') + deux(h) + ' : ' + deux(m) + ' : ' + deux(s);
+      };
+      const t = setInterval(maj, 1000); maj();
+    });
+  }
+
+  /* ---------- Mail « elle est entrée » (Netlify Forms) ---------- */
+  // ?nico sur ton appareil coupe ces mails ; ?mail les remet.
+  if (location.search.includes('nico')) { try { localStorage.setItem('bureau-sans-mail', '1'); } catch {} }
+  if (location.search.includes('mail')) { try { localStorage.removeItem('bureau-sans-mail'); } catch {} }
+  async function prevenirNico() {
+    try {
+      if (localStorage.getItem('bureau-sans-mail')) return;
+      if (location.protocol === 'file:' || /^(localhost|127\.)/.test(location.hostname)) return;
+      const dernier = +localStorage.getItem('bureau-visite') || 0;
+      if (Date.now() - dernier < 36e5) return;                       // au plus un mail par heure
+      localStorage.setItem('bureau-visite', String(Date.now()));
+      await fetch('/', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ 'form-name': 'visite', message: 'Mia vient d’ouvrir le site !', quand: new Date().toLocaleString('fr-FR') }).toString()
+      });
+    } catch {}
+  }
+
   /* ---------- 3. Mot de passe ---------- */
   function askPassword() {
     $('#loading').style.display = 'none';
@@ -233,6 +296,7 @@
         $('#msg').style.color = '#006000';
         $('#msg').textContent = 'Connexion en cours…';
         try { Sons.ding(); } catch {}
+        prevenirNico();
         $('#pw').disabled = true; $('#form button').disabled = true;
         setTimeout(lancerIntro, 500);
       } else {
@@ -251,6 +315,7 @@
     $('#bios').style.display = 'none';
     $('#stage').style.display = 'grid';
     await load();
+    await attendreDate();
     askPassword();
   })();
 })();

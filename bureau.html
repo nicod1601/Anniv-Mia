@@ -207,7 +207,41 @@
   #fete-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
   @keyframes pop2 { from { transform: scale(.7); opacity: 0; } }
 
-  @media (prefers-reduced-motion: reduce) { .win { animation: none; } .icon.pulse .ico, .fete-carte, #fete { animation: none; } }
+  /* ----- bouton + menu Démarrer ----- */
+  .demarrer { font: inherit; font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 7px; padding: 0 14px; height: 32px; border: 0; border-radius: 5px; cursor: pointer; flex: none;
+    background: linear-gradient(135deg, #2f8f6b, #1f6f5c); }
+  .demarrer:hover, .demarrer[aria-expanded="true"] { filter: brightness(1.2); }
+  .demarrer:focus-visible { outline: 2px solid var(--accent); }
+  #menu-demarrer { position: fixed; left: 8px; bottom: 56px; z-index: 99991; width: 290px; padding: 8px; border-radius: 12px;
+    background: rgba(14,30,36,.97); color: #fff; box-shadow: 0 16px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.1); user-select: none; }
+  #menu-demarrer[hidden] { display: none; }
+  #menu-demarrer .dm-titre { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8fb3ad; padding: 6px 10px 4px; }
+  #menu-demarrer button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; font-size: 14px; color: #fff; background: none; border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+  #menu-demarrer button:hover, #menu-demarrer button:focus-visible { background: rgba(255,255,255,.12); outline: none; }
+  #menu-demarrer .dm-ico { width: 28px; height: 28px; flex: none; display: grid; place-items: center; }
+  #menu-demarrer .dm-ico img, #menu-demarrer .dm-ico svg { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; }
+  #menu-demarrer hr { border: 0; border-top: 1px solid rgba(255,255,255,.12); margin: 6px 4px; }
+  #menu-demarrer .dm-arret { color: #ffb4a8; }
+
+  /* ----- progression (vider la corbeille) ----- */
+  .prog { height: 18px; border-radius: 9px; background: #e3dfd2; overflow: hidden; border: 1px solid var(--line); }
+  .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3b7d6e, #6fd68f); transition: width .14s linear; }
+
+  /* ----- arrêt de l'ordinateur / générique ----- */
+  #arret { position: fixed; inset: 0; z-index: 100002; background: #000; color: #fff; display: grid; place-items: center; padding: 24px; animation: fondu .8s ease-out; }
+  #arret[hidden] { display: none; }
+  #arret-attente { font-size: 20px; letter-spacing: .06em; opacity: .85; }
+  #arret-generique { text-align: center; max-width: 520px; }
+  #arret-generique[hidden], #arret-attente[hidden] { display: none; }
+  .arret-ligne { font-size: 24px; margin: 6px 0; opacity: 0; animation: apparait 1.4s ease forwards; }
+  .arret-ligne:nth-child(1) { font-size: 16px; color: #8fb3ad; letter-spacing: .12em; text-transform: uppercase; }
+  .arret-msg { margin: 28px 0 26px; line-height: 1.7; opacity: 0; white-space: pre-line; animation: apparait 1.6s ease forwards; }
+  #arret-btn { font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: none; border: 1px solid rgba(255,255,255,.55); border-radius: 999px; padding: 10px 28px; cursor: pointer; opacity: 0; animation: apparait 1.2s ease forwards; }
+  #arret-btn:hover { background: rgba(255,255,255,.14); }
+  #arret-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  @keyframes apparait { to { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) { .win { animation: none; } .icon.pulse .ico, .fete-carte, #fete, #arret { animation: none; } .arret-ligne, .arret-msg, #arret-btn { animation: none; opacity: 1; } .prog i { transition: none; } }
   @media (max-width: 600px) { .win { min-width: 0; } }
 </style>
 </head>
@@ -231,6 +265,16 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <div id="menu-fond" role="menu" aria-label="Fond d’écran" hidden></div>
+<div id="menu-demarrer" role="menu" aria-label="Menu Démarrer" hidden></div>
+
+<div id="arret" role="dialog" aria-modal="true" aria-label="Arrêt de l’ordinateur" hidden>
+  <div id="arret-attente">Arrêt en cours…</div>
+  <div id="arret-generique" hidden>
+    <div id="arret-lignes"></div>
+    <p class="arret-msg" id="arret-msg"></p>
+    <button type="button" id="arret-btn"></button>
+  </div>
+</div>
 <input type="file" id="fond-fichier" accept="image/*" hidden>
 
 <div id="fete" role="dialog" aria-modal="true" aria-labelledby="fete-titre" hidden>
@@ -244,6 +288,7 @@
 </div>
 
 <footer id="taskbar">
+  <button type="button" class="demarrer" id="btn-demarrer" aria-haspopup="true" aria-expanded="false"><span aria-hidden="true">★</span> Démarrer</button>
   <div id="tasks" role="toolbar" aria-label="Fenêtres ouvertes"></div>
   <button type="button" class="tb-btn" id="btn-fond" aria-label="Changer le fond d’écran" title="Fond d’écran">🖼</button>
   <button type="button" class="tb-btn" id="btn-son" aria-label="Couper ou remettre le son" title="Son">🔊</button>
@@ -255,6 +300,7 @@
 <script src="perso.js"></script>
 <script src="sons.js"></script>
 <script src="succes.js"></script>
+<script src="apps.js"></script>
 <script src="jeux/jeux.js"></script>
 <script>
 (() => {
@@ -352,7 +398,7 @@
   function makeIcon(node, onOpen) {
     const b = document.createElement('button');
     b.className = 'icon';
-    const visuel = node.icone ? '<img src="' + node.icone + '" alt="" draggable="false">' : ICONS[node.type];
+    const visuel = node.svg ? node.svg : node.icone ? '<img src="' + node.icone + '" alt="" draggable="false">' : ICONS[node.type];
     b.innerHTML = '<div class="ico">' + visuel + '</div><span></span>';
     $('span', b).textContent = node.name;
     b.title = node.name;
@@ -448,7 +494,7 @@
     openWindow(root.name, (el, w) => {
       const stack = [root];
       const content = $('.content', el);
-      content.innerHTML = `<div class="path"><button class="up" aria-label="Dossier parent">↑</button><span class="where"></span></div><div class="body"></div>`;
+      content.innerHTML = `<div class="path"><button class="up" aria-label="Dossier parent">↑</button><span class="where"></span><span style="flex:1"></span><button class="vider" type="button" hidden>Vider la corbeille</button></div><div class="body"></div>`;
       const up = $('.up', content), where = $('.where', content), body = $('.body', content);
 
       async function show() {
@@ -457,6 +503,9 @@
         up.disabled = stack.length < 2;
         w.task.textContent = cur.name; $('b', el).textContent = cur.name;
         suivi(stack);
+        const vider = $('.vider', content);
+        vider.hidden = !(stack.length === 1 && /corbeille/i.test(root.name));
+        vider.onclick = viderCorbeille;
         body.innerHTML = '<div class="note">Chargement…</div>';
         try {
           const list = sortNodes(await cur.children());
@@ -544,7 +593,11 @@
 
   let lockNode = null;
   const boutons = new Map();
-  const estVerrouille = n => n === lockNode && !Jeux.tousTermines();
+  const dateDe = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d : null; };
+  const dateCadeau = dateDe(window.PERSO && window.PERSO.anniversaire && window.PERSO.anniversaire.cadeau);
+  const cadeauPret = () => !dateCadeau || Date.now() >= dateCadeau.getTime();
+  const quandCadeau = () => dateCadeau ? dateCadeau.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  const estVerrouille = n => n === lockNode && (!Jeux.tousTermines() || !cadeauPret());
 
   function majVerrous() {
     boutons.forEach((btn, n) => {
@@ -561,8 +614,10 @@
     majVerrous();
     const app = Jeux.apps.find(a => a.id === id);
     if (lockNode && Jeux.tousTermines()) {
-      toast('Les trois jeux sont terminés : le dossier « ' + lockNode.name + ' » est déverrouillé !');
-      setTimeout(() => lancerFete(), 2600);       // le temps de voir le résultat du dernier jeu
+      if (cadeauPret()) {
+        toast('Les trois jeux sont terminés : le dossier « ' + lockNode.name + ' » est déverrouillé !');
+        setTimeout(verifierFete, 2600);           // le temps de voir le résultat du dernier jeu
+      } else toast('Les trois jeux sont terminés ! Le dossier « ' + lockNode.name + ' » s’ouvrira le ' + quandCadeau() + '.');
     } else toast('Jeu terminé : ' + (app ? app.nom : id) + ' ✓');
   };
 
@@ -581,27 +636,38 @@
     }, { w: 360, h: 190, silencieux: true });
   }
 
+  function ouvrirApp(id) {
+    if (id === 'succes') { window.Succes && window.Succes.ouvrir({ openWindow }); return; }
+    window.Apps && window.Apps.ouvrir(id, { openWindow });
+  }
+
   function ouvrirDepuisBureau(node) {
-    if (node.special === 'succes') { window.Succes && window.Succes.ouvrir({ openWindow }); return; }
+    if (node.special) { ouvrirApp(node.special); return; }
     if (node.app) { Jeux.ouvrir(node.app, { openWindow }); return; }
     if (estVerrouille(node)) {
       son('erreur');
-      messageBox('Accès refusé', 'Ce dossier est verrouillé. Termine d’abord les trois jeux du bureau.');
+      messageBox('Accès refusé', Jeux.tousTermines()
+        ? 'Ce dossier s’ouvrira le ' + quandCadeau() + '. Encore un peu de patience !'
+        : 'Ce dossier est verrouillé. Termine d’abord les trois jeux du bureau.');
       return;
     }
     openNode(node);
   }
 
+  let corbeilleNode = null;
   function showDesktop(list, url) {
     sortNodes(list);
     lockNode = list.find(n => n.dir && n.name.toLowerCase() === DOSSIER_VERROUILLE) || null;
-    const corbeille = list.find(n => n.dir && n.name.toLowerCase() === 'corbeille') || null;
-    if (corbeille) corbeille.type = 'corbeille';
+    corbeilleNode = list.find(n => n.dir && n.name.toLowerCase() === 'corbeille') || null;
+    if (corbeilleNode) corbeilleNode.type = 'corbeille';
     const apps = Jeux.apps.map(a => ({
       name: a.nom, dir: false, type: 'app', icone: a.icone, app: a.id, children: async () => []
     }));
+    const autres = (window.Apps ? window.Apps.liste() : []).map(a => ({
+      name: a.nom, dir: false, type: 'app', svg: a.svg, special: a.id, children: async () => []
+    }));
     const noeudSucces = { name: 'Succès', dir: false, type: 'succes', special: 'succes', children: async () => [] };
-    const tout = [...list.filter(n => n !== corbeille), ...apps, noeudSucces, ...(corbeille ? [corbeille] : [])];
+    const tout = [...list.filter(n => n !== corbeilleNode), ...apps, ...autres, noeudSucces, ...(corbeilleNode ? [corbeilleNode] : [])];
     boutons.clear();
     desktop.replaceChildren(...tout.map(n => {
       const b = makeIcon(n, ouvrirDepuisBureau);
@@ -670,15 +736,13 @@
   }
 
   const menuFond = $('#menu-fond');
+  let menuItems = [];
   function fermerMenu() { menuFond.hidden = true; }
-  function ouvrirMenuFond(x, y, ancre) {
-    const choix = [];
-    if (photoNous) choix.push(['photo', 'Notre photo']);
-    Object.entries(DEGRADES).forEach(([k, v]) => choix.push(['degrade:' + k, v[0]]));
-    choix.push(['perso', 'Choisir une image…']);
-    const actuel = modeFond === 'auto' ? (photoNous ? 'photo' : 'degrade:turquoise') : modeFond;
-    menuFond.innerHTML = '<div class="menu-titre">Fond d’écran</div>' + choix.map(([m, t]) =>
-      '<button type="button" role="menuitem" data-m="' + m + '"' + (m === actuel ? ' class="actif"' : '') + '>' + t + '</button>').join('');
+  function ouvrirMenu(titre, items, x, y, ancre) {
+    menuItems = items;
+    menuFond.setAttribute('aria-label', titre);
+    menuFond.innerHTML = '<div class="menu-titre">' + titre + '</div>' + items.map((it, i) =>
+      '<button type="button" role="menuitem" data-i="' + i + '"' + (it.actif ? ' class="actif"' : '') + '>' + it.texte + '</button>').join('');
     menuFond.hidden = false;
     const r = menuFond.getBoundingClientRect();
     menuFond.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
@@ -686,17 +750,42 @@
     menuFond.querySelector('button').focus();
   }
   menuFond.addEventListener('click', e => {
-    const b = e.target.closest('button[data-m]'); if (!b) return;
-    const m = b.dataset.m;
-    fermerMenu();
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    const it = menuItems[+b.dataset.i]; fermerMenu();
+    if (it && it.action) it.action();
+  });
+  function choisirFond(m) {
     if (m === 'perso') { $('#fond-fichier').click(); return; }
     modeFond = m; lsSet(CLE_FOND, m); appliquerFond(); succes('fond'); son('ding');
+  }
+  function ouvrirMenuFond(x, y, ancre) {
+    const actuel = modeFond === 'auto' ? (photoNous ? 'photo' : 'degrade:turquoise') : modeFond;
+    const items = [];
+    if (photoNous) items.push({ texte: 'Notre photo', actif: actuel === 'photo', action: () => choisirFond('photo') });
+    Object.entries(DEGRADES).forEach(([k, v]) => items.push({ texte: v[0], actif: actuel === 'degrade:' + k, action: () => choisirFond('degrade:' + k) }));
+    items.push({ texte: 'Choisir une image…', action: () => choisirFond('perso') });
+    ouvrirMenu('Fond d’écran', items, x, y, ancre);
+  }
+  document.addEventListener('pointerdown', e => {
+    if (!menuFond.hidden && !e.target.closest('#menu-fond')) fermerMenu();
+    if (!menuDem.hidden && !e.target.closest('#menu-demarrer, #btn-demarrer')) fermerDemarrer();
   });
-  document.addEventListener('pointerdown', e => { if (!menuFond.hidden && !e.target.closest('#menu-fond')) fermerMenu(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { fermerMenu(); fermerDemarrer(); } });
   desktop.addEventListener('contextmenu', e => {
+    const ic = e.target.closest('.icon');
+    if (ic) {                                                          // clic droit sur la corbeille
+      const n = [...boutons].find(([, b]) => b === ic);
+      if (n && n[0] === corbeilleNode) {
+        e.preventDefault();
+        ouvrirMenu('Corbeille', [
+          { texte: 'Ouvrir', action: () => ouvrirDepuisBureau(corbeilleNode) },
+          { texte: 'Vider la corbeille', action: viderCorbeille }
+        ], e.clientX, e.clientY);
+      }
+      return;
+    }
     if (e.target !== desktop) return;
-    e.preventDefault(); ouvrirMenuFond(e.clientX, e.clientY);
+    e.preventDefault(); ouvrirMenuFond(e.clientX, e.clientY);          // clic droit sur le fond
   });
   $('#btn-fond').addEventListener('click', e => {
     if (!menuFond.hidden) { fermerMenu(); return; }
@@ -765,6 +854,10 @@
     son('fanfare'); confettis();
     $('#fete-btn').focus();
   }
+  function verifierFete() {            // fête : jeux finis + date du cadeau atteinte + jamais montrée
+    if (!lockNode || !Jeux.tousTermines() || !cadeauPret() || lsGet('bureau-fete')) return;
+    lancerFete();
+  }
   $('#fete-btn').addEventListener('click', () => { fermerFete(); if (lockNode && !estVerrouille(lockNode)) ouvrirDepuisBureau(lockNode); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#fete').hidden) fermerFete(); });
 
@@ -779,6 +872,99 @@
   }
   $('#clock').addEventListener('click', ouvrirBlocNotes);
   $('#clock').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirBlocNotes(); } });
+
+  /* ---------- Vider la corbeille (impossible !) ---------- */
+  function viderCorbeille() {
+    openWindow('Suppression en cours…', (el, w) => {
+      $('.content', el).innerHTML = '<div class="msg"><p>Suppression des éléments de la corbeille…</p><div class="prog"><i></i></div></div>';
+      const barre = $('.prog i', el); let p = 0;
+      const t = setInterval(() => {
+        p = Math.min(87, p + 3 + Math.random() * 5); barre.style.width = p + '%';
+        if (p >= 87) {
+          clearInterval(t);
+          setTimeout(() => {
+            $('.x', el).click(); son('erreur'); succes('impossible');
+            messageBox('Corbeille', 'Impossible de vider la corbeille : trop de souvenirs.');
+          }, 700);
+        }
+      }, 140);
+      w.cleanup = () => clearInterval(t);
+    }, { w: 380, h: 170, silencieux: true });
+  }
+
+  /* ---------- Menu Démarrer ---------- */
+  const menuDem = $('#menu-demarrer'), btnDem = $('#btn-demarrer');
+  function fermerDemarrer() { menuDem.hidden = true; btnDem.setAttribute('aria-expanded', 'false'); }
+  function ouvrirDemarrer() {
+    const lignes = [];
+    Jeux.apps.forEach(a => lignes.push({ ico: '<img src="' + a.icone + '" alt="">', nom: a.nom, action: () => Jeux.ouvrir(a.id, { openWindow }) }));
+    (window.Apps ? window.Apps.liste() : []).forEach(a => lignes.push({ ico: a.svg, nom: a.nom, action: () => ouvrirApp(a.id) }));
+    lignes.push({ ico: ICONS.succes, nom: 'Succès', action: () => ouvrirApp('succes') });
+    menuDem.innerHTML = '<div class="dm-titre">Programmes</div>' +
+      lignes.map((l, i) => '<button type="button" role="menuitem" data-i="' + i + '"><span class="dm-ico">' + l.ico + '</span>' + l.nom + '</button>').join('') +
+      '<hr><button type="button" role="menuitem" data-i="fond"><span class="dm-ico">🖼</span>Fond d’écran…</button>' +
+      '<button type="button" role="menuitem" class="dm-arret" data-i="arret"><span class="dm-ico">⏻</span>Arrêter l’ordinateur…</button>';
+    menuDem._lignes = lignes;
+    menuDem.hidden = false; btnDem.setAttribute('aria-expanded', 'true');
+    menuDem.querySelector('button').focus();
+  }
+  btnDem.addEventListener('click', () => { menuDem.hidden ? ouvrirDemarrer() : fermerDemarrer(); });
+  menuDem.addEventListener('click', e => {
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    const i = b.dataset.i; fermerDemarrer();
+    if (i === 'arret') arreterOrdinateur();
+    else if (i === 'fond') { const r = btnDem.getBoundingClientRect(); ouvrirMenuFond(r.left, r.top, true); }
+    else menuDem._lignes[+i].action();
+  });
+
+  /* ---------- Arrêter l'ordinateur : écran de fin ---------- */
+  function arreterOrdinateur() {
+    [...wins].forEach(w => w.el.querySelector('.x').click());       // ferme tout (coupe aussi la musique)
+    const F = (window.PERSO && window.PERSO.fin) || {};
+    const lignes = F.lignes || ['Fait par Nico', 'pour Mia'];
+    $('#arret-lignes').innerHTML = lignes.map((l, i) => '<div class="arret-ligne" style="animation-delay:' + (i * 1.1) + 's"></div>').join('');
+    $('#arret-lignes').querySelectorAll('.arret-ligne').forEach((d, i) => { d.textContent = lignes[i]; });
+    const t0 = lignes.length * 1.1 + .4;
+    $('#arret-msg').textContent = F.message || '';
+    $('#arret-msg').style.animationDelay = t0 + 's';
+    $('#arret-btn').textContent = F.bouton || 'Redémarrer';
+    $('#arret-btn').style.animationDelay = (t0 + 1.4) + 's';
+    $('#arret-attente').hidden = false; $('#arret-generique').hidden = true;
+    $('#arret').hidden = false;
+    son('arret'); succes('fin');
+    setTimeout(() => { $('#arret-attente').hidden = true; $('#arret-generique').hidden = false; $('#arret-btn').focus(); }, 1900);
+  }
+  $('#arret-btn').addEventListener('click', () => { location.href = 'index.html'; });
+
+  /* ---------- Codes secrets au clavier ---------- */
+  function pluie(emojis) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const z = document.createElement('div'); z.id = 'pluie';
+    for (let i = 0; i < 38; i++) {
+      const sp = document.createElement('span');
+      sp.textContent = emojis[i % emojis.length];
+      sp.style.left = Math.random() * 100 + 'vw';
+      sp.style.fontSize = 18 + Math.random() * 22 + 'px';
+      sp.style.animationDuration = 3 + Math.random() * 3 + 's';
+      sp.style.animationDelay = Math.random() * 1.6 + 's';
+      z.appendChild(sp);
+    }
+    document.body.appendChild(z); setTimeout(() => z.remove(), 8000);
+  }
+  const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
+  const CODES = [
+    { code: KONAMI, action: () => { succes('konami'); son('fanfare'); pluie(['🎮', '⭐', '✨']); toast('Code secret activé !'); } },
+    { code: [...'flop'], action: () => { succes('flop'); son('erreur'); toast('Shadow vient encore de flop.'); } },
+    { code: [...'mia'], action: () => { succes('mia'); son('etoile'); pluie(['✨', '⭐', '🌸']); toast('Coucou toi ✨'); } }
+  ];
+  let tampon = [];
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    tampon.push(e.key.toLowerCase()); tampon = tampon.slice(-12);
+    CODES.forEach(c => {
+      if (tampon.length >= c.code.length && c.code.every((k, i) => tampon[tampon.length - c.code.length + i] === k)) { tampon = []; c.action(); }
+    });
+  });
 
   /* ---------- Horloge ---------- */
   const tick = () => {
@@ -800,6 +986,11 @@
   })();
 
   if (location.search.includes('fete')) setTimeout(() => lancerFete(true), 900);   // aperçu : bureau.html?fete
+  setTimeout(verifierFete, 1500);
+  if (dateCadeau && !cadeauPret()) {                                // le cadeau s'ouvre tout seul à l'heure dite
+    const ms = dateCadeau.getTime() - Date.now();
+    if (ms < 2147000000) setTimeout(() => { majVerrous(); verifierFete(); }, ms + 500);
+  }
   start();
 })();
 </script>
